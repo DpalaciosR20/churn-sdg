@@ -41,7 +41,7 @@ def test_entradas_originales():
     assert i1 == [0,1,1,0]
     assert i2 == [0.1,0.9,0.4,0.8]
 
-def test_ValueError():
+def test_k_fuera_de_rango_lanza_error():
     with pytest.raises(ValueError): precision_at_k([0,1],[0.9],1)       # Largo distinto
     with pytest.raises(ValueError): precision_at_k([0],[0.9,0.8],1)     # Largo distinto
     with pytest.raises(ValueError): precision_at_k([0,1],[0.9,0.8],0)   # k=0
