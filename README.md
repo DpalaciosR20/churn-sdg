@@ -10,3 +10,4 @@ Este es un README.md sencillo para empezar el proyecto
 2. Entra a la carpeta del proyecto:
    ```bash
    cd churn-sdg
+   ```
