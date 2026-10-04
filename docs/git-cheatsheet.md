@@ -91,3 +91,10 @@ Antes de cualquier commit, esto no debe devolver nada: `git grep -n "<<<<<<<"`.
 5. **Ejecuta los tests antes de cada commit.**
 6. **Commits pequeños, con mensajes en imperativo** que digan qué hace el cambio.
 7. **Nunca subas datos, modelos, secretos ni entornos virtuales.**
+
+## 7 · Borrar ramas
+| Quiero borrar ...                                         | Comando                           |
+|-----------------------------------------------------------|-----------------------------------|
+| Una rama local                                            | `git branch -d nombre`            |
+| Una rama en GitHub                                        | `git push origin --delete nombre` |
+| Un recuerdo viejo de una rama que ya no existe en GitHub  | `git fetch --prune`               |
