@@ -66,6 +66,8 @@ git commit                         # termina el merge
 ```
 Antes de cualquier commit, esto no debe devolver nada: `git grep -n "<<<<<<<"`.
 
+Para dejar de rastrear un archivo que ya está en Git: `git rm --cached archivo`
+
 ## 4 · Consultar
 | Comando                           | Para qué                                      |
 | --------------------------------- | --------------------------------------------- |
