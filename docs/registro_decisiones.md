@@ -35,3 +35,9 @@ Opciones consideradas: (A) Copiar el código del paquete dentro de dags/, (B) Mo
 Decisión: (C) montar churn/ como volumen y declarar PYTHONPATH. El volumen ./churn:/opt/airflow/churn y PYTHONPATH=/opt/airflow, ambos en el bloque compartido x-airflow-common
 Justificación: Este mismo paquete de churn/ lo usan mis tests así que, para no tener código duplicado, ayuda tenerlo en una misma carpeta, además, tenerlo en un volumen, ayuda a que los cambios se vean al instante sin reconstruir nada así que eso ahorra tiempo. plugins/ es una carpeta para extender Airflow, no para la lógica de negocio; los tests tendrías que iportar desde una carpeta de Airflow.Usar ina imagen propia es la opción correcta para producción, pero en desarrollo obliga a reconstruir la imagen con cada cambio.
 Riesgos: Al estar trabajando con ramas en git para el control de versiones, si cambio de rama y la carpeta se borra y se recrea, se perderá visibilidad de este paquete; para esto deberé hacer 'docker compose down' y 'up -d' después de cambiar de rama. En un entorno real, sin carpetas compartidas, este enfoque no ayudaría porque no se tendría la visibilidad de manera directa, sin reconstruir, de este paquete; ahí se usaría la opción D (imagen con el paquete instalado).Esta solución aplica para el contexto del proyecto actual.
+
+### D-006 - Cómo leer el CSV con pandas
+Fecha: 04/10/2026
+Contexto: Al procesar el CSV con pd.read_csv con la lectura de valores NaN por defecto, se observó que desaparecía un grupo de la columna `hnd_webcap`.
+Decisión: Se optó por leer el conjunto de datos con keep_default_na=False para que no se perdiera esta categoría.
+Riesgos: Al hacer esto puede que hayan valores que caigan en la lista de valores que read_Csv pasa a NaN y que no se pasen a NaN, valores como cadenas vacías que puede se común que caigan en esta lista. Para evitar que valores que se deban considerar como NaN se escapen, se deberá hacer un limpiado de campos vacíos.
