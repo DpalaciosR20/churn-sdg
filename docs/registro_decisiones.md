@@ -41,3 +41,11 @@ Fecha: 04/10/2026
 Contexto: Al procesar el CSV con pd.read_csv con la lectura de valores NaN por defecto, se observó que desaparecía un grupo de la columna `hnd_webcap`.
 Decisión: Se optó por leer el conjunto de datos con keep_default_na=False para que no se perdiera esta categoría.
 Riesgos: Al hacer esto puede que hayan valores que caigan en la lista de valores que read_Csv pasa a NaN y que no se pasen a NaN, valores como cadenas vacías que puede se común que caigan en esta lista. Para evitar que valores que se deban considerar como NaN se escapen, se deberá hacer un limpiado de campos vacíos.
+
+
+### D-007 - Cómo corregir problema de grupo de nulos en churn.eda.tasa_por_decil()
+Fecha: 04/10/2026
+Contexto: Al querer sacar un ranking de señal (rango de la tasa entre deciles) entre las variables numéricas (excepto churn y Customer_ID) me encontré con que al usar dropna=False, eso hacía que se agregara un grupo más: el de los clientes con la variable vacía. Una tasa calculada con un cliente no significa nada, pero el máximo y el mínimo son muy sensibles a esos valores.
+Opciones: (A) Para el ranking, ignorar el grupo de nulos y analizar los nulos por separado. (B) Ignorar cualquier grupo con menos de cierto número de clientes (por ejemplo, 100) al calcular máximo y mínimo.
+Decisión: (A) Para el ranking, ignorar el grupo de nulos y analizar los nulos por separado.
+Justificación: Ignorar cualquier grupo con menos de cierto número de clientes implica un riesgo de no saber exactamente qué número sería el ideal. Ignorar el grupo de nulos para el ranking soluciona el proble para este caso y deja abierto el poder seguir considerando nulos más adelante para otras tareas. Coloqué una variable auxiliar en la fucnión para psar si se usa dropna False o True.
