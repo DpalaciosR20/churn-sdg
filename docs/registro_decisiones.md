@@ -39,8 +39,8 @@ Riesgos: Al estar trabajando con ramas en git para el control de versiones, si c
 ## D-006 - Cómo leer el CSV con pandas
 Fecha: 04/10/2026
 Contexto: Al procesar el CSV con pd.read_csv con la lectura de valores NaN por defecto, se observó que desaparecía un grupo de la columna `hnd_webcap`.
-Decisión: Se optó por leer el conjunto de datos con keep_default_na=False para que no se perdiera esta categoría.
-Riesgos: Al hacer esto puede que hayan valores que caigan en la lista de valores que read_Csv pasa a NaN y que no se pasen a NaN, valores como cadenas vacías que puede se común que caigan en esta lista. Para evitar que valores que se deban considerar como NaN se escapen, se deberá hacer un limpiado de campos vacíos.
+Decisión: Se optó por leer el conjunto de datos con keep_default_na=False y na_values=[""] para que no se perdiera esta categoría y sólo se consideraran los campos vacíos como NaN.
+Riesgos: Si el archivo tuviera otras formas de marcar faltantes ("NULL", "N/A"), ya no se detectarían. Comparé la carga cruda contra la normal y solo "NA" estaba en ese caso.
 
 
 ## D-007 - Cómo corregir problema de grupo de nulos en churn.eda.tasa_por_decil()
@@ -52,16 +52,16 @@ Justificación: Ignorar cualquier grupo con menos de cierto número de clientes 
 
 ## D-008 - Selección de variables por familia y prevención de multicolinealidad
 Fecha: 04/10/2026
-Contexto: El dataset presenta alta redundancia entre variables (pares con correlación Spearman > 0.9, ej. minutos vs. conteo de llamadas) y variables acumuladas (totmou, adjrev) que esconden la antigüedad del cliente, generando fuga de datos (data leakage).
+Contexto: El dataset presenta alta redundancia entre variables (pares con correlación Spearman > 0.9, ej. minutos vs. conteo de llamadas) y variables acumuladas (totmou, adjrev) que esconden la antigüedad del cliente. Mezclan el gasto con la antigüedad (confusión y redundancia con months)
 Opciones consideradas: (1) Mantener todas las columnas y confiar en los árboles del modelo. (2) Quedarse con las variables de mayor señal estadística plana (totales y ajustadas). (3) Elegir un representante por familia de comportamiento priorizando métricas mensuales, nivel de señal, ausencia de nulos y explicabilidad de negocio.
 Decisión: Seleccionar métricas promedio/mensuales por familia (rev_Mean, mou_Mean, ovrrev_Mean, comp_dat_Mean, custcare_Mean, phones), descartando la familia de conteo de llamadas (por redundancia con minutos) y todas las métricas acumuladas. Se conservan las variables independientes o "huérfanas" (months, change_mou, etc.).
 Justificación: Las variables acumuladas inflan su importancia porque contienen implícitamente la antigüedad del cliente (el principal factor de supervivencia). Eliminar la multicolinealidad y preferir promedios mensuales garantiza que el negocio pueda interpretar el modelo de forma directa ("cuánto paga o habla al mes el cliente") y que la herramienta SHAP no diluya la importancia de las características entre variables redundantes.
-Consecuencias / riesgos: Se descartan columnas altamente correlacionadas con el target, lo que podría reducir muy marginalmente el poder predictivo bruto, pero se logra un modelo robusto, interpretable, generalizable y libre de sesgo temporal.
+Consecuencias / riesgos: Se descartan columnas altamente correlacionadas entre sí, lo que podría reducir muy marginalmente el poder predictivo bruto.
 
 ## D-009 - Tratamiento de valores negativos (imposibles)
 Fecha: 04/10/2026
-Contexto: Durante la exploración se encontraron valores numéricos que violan las reglas de negocio: días de edad del equipo (eqpdays) por debajo de cero e ingresos mensuales promedio (rev_Mean) negativos.
+Contexto: Durante la exploración se encontraron valores numéricos que violan las reglas de negocio: días de edad del equipo (eqpdays) por debajo de cero e ingresos y cargos (rev_Mean, totmrc_Mean, avg6rev) negativos.
 Opciones consideradas: (1) Transformar todos los negativos en nulos (NaN) para imputación algorítmica. (2) Llevarlos a 0. (3) Eliminar las filas.
-Decisión: Aplicar un límite inferior de cero para la variable eqpdays y eliminar por completo las filas que presentan valores negativos en rev_Mean.
-Justificación: En eqpdays, los negativos son pocos y cercanos a cero; se asume que representan equipos adquiridos o registrados justo antes de la activación de la línea, por lo que convertirlos a 0 corrige el error lógico preservando la fila. En rev_Mean, representan un ajuste o error de facturación que afecta a menos del 0.01% de los registros; al ser una fracción irrelevante, la eliminación directa limpia el ruido sin comprometer el tamaño de la muestra.
-Consecuencias / riesgos: Alteración mínima de la distribución base en el día 0 para los equipos. La pérdida de observaciones es tan baja (<0.1%) que no afecta la representatividad de la muestra ni la capacidad de entrenamiento del algoritmo.
+Decisión: Aplicar un límite inferior de cero para la variable eqpdays y transformar todos los negativos en nulos (NaN) para imputación algorítmica en ingresos y egresos con negativos.
+Justificación: En eqpdays, los negativos son pocos y cercanos a cero; se asume que representan equipos adquiridos o registrados justo antes de la activación de la línea, por lo que convertirlos a 0 corrige el error lógico preservando la fila. En ingresos y cargos, representan un ajuste o error de facturación que afecta a menos del 0.01% de los registros; al ser una fracción irrelevante, la imputación limpia el ruido.
+Consecuencias / riesgos: Alteración mínima de la distribución base en el día 0 para los equipos y en los ingresos mensuales.
