@@ -19,6 +19,7 @@ Contexto:voy uns 3 días atrás del calendario original.
 Opciones: (A) plan comprimido desde ya · (B) mantener el alcance original con horas extra y un punto de revisión.
 Decisión: B, con revisión el domingo 4 de octubre por la noche.
 Criterio: si Airflow corre y el EDA está terminado, se mantiene el alcance; si no, pasamos al plan comprimido y MLflow sale.
+Actualización 05/10/2026: Ya se cuenta con Airflow corriendo y EDA terminado
 
 ## D-004 - Versión de Apache Airflow
 Fecha: 03/10/2026
