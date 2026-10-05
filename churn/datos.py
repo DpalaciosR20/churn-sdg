@@ -39,9 +39,34 @@ def reporte_calidad(df: pd.DataFrame) -> pd.DataFrame:
     }).sort_values(by='pct_nulos', ascending=False)
     return reporte
 
-def tasa_por_grupo(df: pd.DataFrame, grupo: pd.Series) -> pd.DataFrame:
+def limpiar_nombres_columnas(serie_nombres: pd.Series) -> pd.Series:
+    """Limpia prefijos no deseados y estandariza los nombres a minúsculas
+
+    utilizando métodos .str de pandas.
+    """
+    # 1. Convertir todo a minúsculas
+    nombres_limpios = serie_nombres.str.lower()
+
+    # 2. Definir los prefijos a remover con regex
+    # Usamos '^' para asegurar que solo se eliminen al inicio del texto
+    patron_prefijos = r"^(text_format|check|vpn_key)"
+
+    # 3. Remover prefijos
+    nombres_limpios = nombres_limpios.str.replace(
+        patron_prefijos, "", regex=True
+    )
+
+    # 4. (Opcional) Eliminar espacios en blanco sobrantes si los hubiera
+    nombres_limpios = nombres_limpios.str.strip()
+
+    return nombres_limpios
+
+def tasa_por_grupo(df: pd.DataFrame, grupo: pd.Series, ordenar_por_tasa: bool = True) -> pd.DataFrame:
     """Calcula el número de clientes y la tasa de churn por grupo"""
-    return df.groupby(grupo, dropna=False).agg(
+    tabla = df.groupby(grupo, dropna=False).agg(
         n_clientes=('churn', 'count'),
         tasa_churn=('churn', 'mean')
-    ).sort_values(by='tasa_churn', ascending=False)
+    )
+    if ordenar_por_tasa:
+        return tabla.sort_values(by='tasa_churn', ascending=False)
+    return tabla
