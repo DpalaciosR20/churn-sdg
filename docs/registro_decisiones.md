@@ -66,3 +66,11 @@ Opciones consideradas: (1) Transformar todos los negativos en nulos (NaN) para i
 Decisión: Aplicar un límite inferior de cero para la variable eqpdays y transformar todos los negativos en nulos (NaN) para imputación algorítmica en ingresos y egresos con negativos.
 Justificación: En eqpdays, los negativos son pocos y cercanos a cero; se asume que representan equipos adquiridos o registrados justo antes de la activación de la línea, por lo que convertirlos a 0 corrige el error lógico preservando la fila. En ingresos y cargos, representan un ajuste o error de facturación que afecta a menos del 0.01% de los registros; al ser una fracción irrelevante, la imputación limpia el ruido.
 Consecuencias / riesgos: Alteración mínima de la distribución base en el día 0 para los equipos y en los ingresos mensuales.
+
+## D-010 - Qué hacer con variables sensibles
+Fecha: 05/10/2026
+Contexto: El dataset tiene varibales sensibles como ethnic, marital, las de hijos, area, prizm_social_one y crlscod (refleja la situación financiera del cliente). Algunas de estas incluso parecieran variar entre grupos con respecto a la tasa de churn.
+Opciones: (1) Considerar variables sensibles con gran variabilidad entre grupos. (2) No considerarlas.
+Decisión: Decidí no considerarlas para continuar con una prioridad ética de entrenar un buen modelo que no termine sesgado por cuestiones sensibles como la etnia o la localidad de una persona o si posee una casa grande o no. Se dejaron fuera también, por la misma razón, las variables numéricas "adults", "income", "numbcars", "forgntvl", "truck", "rv" y "lor".
+Justificación: Se excluyen por razones éticas y legales: las decisiones sobre los clientes (a quién se le ofrece un beneficio) no deben depender del origen étnico, el estado civil o la composición familiar.
+Riesgos: El modelo puede perder algo de desempeño. Además, otras variables podrían seguir actuando como proxy de datos sensibles; en producción habría que auditar las predicciones por grupo.
