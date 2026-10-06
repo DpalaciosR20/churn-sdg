@@ -6,6 +6,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, FunctionTransformer
 from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
 
 def dividir_datos(
         df: pd.DataFrame,
@@ -38,7 +39,7 @@ def limpiar_negativos(X: pd.DataFrame) -> pd.DataFrame:
 
     return X
 
-def construir_preprocesador(num_cols: list[str], cat_cols: list[str]) -> ColumnTransformer:
+def construir_preprocesador(num_cols: list[str], cat_cols: list[str], escalar=True) -> ColumnTransformer:
     """Imputa y escala las numéricas; imputa y codifica las categóricas."""
     numericas = make_pipeline(
         # Con add_indicator=True, se agrega un MissingIndicator transform a la salida de la imputación para mantener un indicador de cuáles fueron los valores que venían como NaN. Esto permite a un estimador predictivo contabilizar los NaN sin importar la imputación.
@@ -50,15 +51,24 @@ def construir_preprocesador(num_cols: list[str], cat_cols: list[str]) -> ColumnT
         SimpleImputer(strategy="constant", fill_value="Sin dato"),
         OneHotEncoder(handle_unknown="infrequent_if_exist", min_frequency=100)
     )
+    
     return ColumnTransformer([
-        ("num", numericas, num_cols),
+        ("num", numericas if escalar else "passthrough", num_cols),
         ("cat", categoricas, cat_cols)
     ])
 
-def construir_modelo(num_cols: list[str], cat_cols: list[str], C: float = 1.0) -> Pipeline:
+def construir_modelo(num_cols: list[str], cat_cols: list[str], estimador, escalar: bool=True) -> Pipeline:
+    """Pipeline completo: limpieza -> preprocesamiento -> regresión logística."""
+    return Pipeline([
+        ("limpieza", FunctionTransformer(limpiar_negativos, feature_names_out="one-to-one")),
+        ("pre", construir_preprocesador(num_cols, cat_cols, escalar)),
+        ("clf", estimador),
+    ])
+
+def construir_modelo_DecisionTreeClassifier(num_cols: list[str], cat_cols: list[str], max_depth: int) -> Pipeline:
     """Pipeline completo: limpieza -> preprocesamiento -> regresión logística."""
     return Pipeline([
         ("limpieza", FunctionTransformer(limpiar_negativos, feature_names_out="one-to-one")),
         ("pre", construir_preprocesador(num_cols, cat_cols)),
-        ("clf", LogisticRegression(C=C, max_iter=2000)),
+        ("clf", DecisionTreeClassifier(max_depth=max_depth)),
     ])
