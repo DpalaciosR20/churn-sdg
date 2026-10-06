@@ -74,3 +74,21 @@ Opciones: (1) Considerar variables sensibles con gran variabilidad entre grupos.
 Decisión: Decidí no considerarlas para continuar con una prioridad ética de entrenar un buen modelo que no termine sesgado por cuestiones sensibles como la etnia o la localidad de una persona o si posee una casa grande o no. Se dejaron fuera también, por la misma razón, las variables numéricas "adults", "income", "numbcars", "forgntvl", "truck", "rv" y "lor".
 Justificación: Se excluyen por razones éticas y legales: las decisiones sobre los clientes (a quién se le ofrece un beneficio) no deben depender del origen étnico, el estado civil o la composición familiar.
 Riesgos: El modelo puede perder algo de desempeño. Además, otras variables podrían seguir actuando como proxy de datos sensibles; en producción habría que auditar las predicciones por grupo.
+
+## D-011 - Elección de modelo final
+Fecha: 05/10/2026
+
+Contexto: Luego de haber superado la línea base con el algoritmo de regresión logística (0.61), y luego de experimentar con otros algoritmos (DecisionTreeClassifier, RandomForestClassifier y LGBMClassifier) encontré que el modelo que mejor se comportaba era el de LGBMClassifier. Luego con este hice experimentaciones con distints hiperparámetros de manera heurística.
+
+Opiones:
+|     | configuración | train | val | brecha |
+| --- | --- | --- | --- | --- |
+| 0   | default | 0.738928 | 0.680010 | 0.058918 |
+| 1   | cfg_2 | 0.728851 | 0.682635 | 0.046216 |
+| 2   | cfg_3 | 0.987739 | 0.661611 | 0.326128 |
+| 3   | regularizada | 0.715042 | 0.680393 | 0.034650 |
+| 4   | profunda | 0.778020 | 0.682799 | 0.095221 |
+
+Decisión: Decidí irme por la configuración 'regularizada'.
+
+Justificación: Se puede ver que los valores de train y val no distan mucho uno del otro, apenas 3.4 puntos porcentuales siendo la brecha más corta, demostrando así que no hay riesgo de overfitting y superando a aregresión logística en val (61%) por ~7 puntos. A pesar de que Regresión Logística es más interpretable, la diferencia de desempeño es lo suficientemente considerable para decidir cambiar de algoritmo por uno que ofreciera un mejor desempeño.
