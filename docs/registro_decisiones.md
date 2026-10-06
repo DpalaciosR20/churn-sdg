@@ -55,7 +55,7 @@ Justificación: Ignorar cualquier grupo con menos de cierto número de clientes 
 Fecha: 04/10/2026
 Contexto: El dataset presenta alta redundancia entre variables (pares con correlación Spearman > 0.9, ej. minutos vs. conteo de llamadas) y variables acumuladas (totmou, adjrev) que esconden la antigüedad del cliente. Mezclan el gasto con la antigüedad (confusión y redundancia con months)
 Opciones consideradas: (1) Mantener todas las columnas y confiar en los árboles del modelo. (2) Quedarse con las variables de mayor señal estadística plana (totales y ajustadas). (3) Elegir un representante por familia de comportamiento priorizando métricas mensuales, nivel de señal, ausencia de nulos y explicabilidad de negocio.
-Decisión: Seleccionar métricas promedio/mensuales por familia (rev_Mean, mou_Mean, ovrrev_Mean, comp_dat_Mean, custcare_Mean, phones), descartando la familia de conteo de llamadas (por redundancia con minutos) y todas las métricas acumuladas. Se conservan las variables independientes o "huérfanas" (months, change_mou, etc.).
+Decisión: Seleccionar métricas promedio/mensuales por familia (rev_Mean, mou_Mean, ovrrev_Mean, comp_dat_Mean, custcare_Mean, phones), descartando la familia de conteo de llamadas (por redundancia con minutos) y todas las métricas acumuladas. Se conservan las variables independientes o "huérfanas" (months, change_mou, etc.). uniqsubs y actvsubs son de la misma familia y generan multicolinealidad, se considerará únicamente uniqsubs ya que aumenta el riesgo de forma consistente
 Justificación: Las variables acumuladas inflan su importancia porque contienen implícitamente la antigüedad del cliente (el principal factor de supervivencia). Eliminar la multicolinealidad y preferir promedios mensuales garantiza que el negocio pueda interpretar el modelo de forma directa ("cuánto paga o habla al mes el cliente") y que la herramienta SHAP no diluya la importancia de las características entre variables redundantes.
 Consecuencias / riesgos: Se descartan columnas altamente correlacionadas entre sí, lo que podría reducir muy marginalmente el poder predictivo bruto.
 
@@ -66,3 +66,11 @@ Opciones consideradas: (1) Transformar todos los negativos en nulos (NaN) para i
 Decisión: Aplicar un límite inferior de cero para la variable eqpdays y transformar todos los negativos en nulos (NaN) para imputación algorítmica en ingresos y egresos con negativos.
 Justificación: En eqpdays, los negativos son pocos y cercanos a cero; se asume que representan equipos adquiridos o registrados justo antes de la activación de la línea, por lo que convertirlos a 0 corrige el error lógico preservando la fila. En ingresos y cargos, representan un ajuste o error de facturación que afecta a menos del 0.01% de los registros; al ser una fracción irrelevante, la imputación limpia el ruido.
 Consecuencias / riesgos: Alteración mínima de la distribución base en el día 0 para los equipos y en los ingresos mensuales.
+
+## D-010 - Qué hacer con variables sensibles
+Fecha: 05/10/2026
+Contexto: El dataset tiene varibales sensibles como ethnic, marital, las de hijos, area, prizm_social_one y crlscod (refleja la situación financiera del cliente). Algunas de estas incluso parecieran variar entre grupos con respecto a la tasa de churn.
+Opciones: (1) Considerar variables sensibles con gran variabilidad entre grupos. (2) No considerarlas.
+Decisión: Decidí no considerarlas para continuar con una prioridad ética de entrenar un buen modelo que no termine sesgado por cuestiones sensibles como la etnia o la localidad de una persona o si posee una casa grande o no. Se dejaron fuera también, por la misma razón, las variables numéricas "adults", "income", "numbcars", "forgntvl", "truck", "rv" y "lor".
+Justificación: Se excluyen por razones éticas y legales: las decisiones sobre los clientes (a quién se le ofrece un beneficio) no deben depender del origen étnico, el estado civil o la composición familiar.
+Riesgos: El modelo puede perder algo de desempeño. Además, otras variables podrían seguir actuando como proxy de datos sensibles; en producción habría que auditar las predicciones por grupo.
