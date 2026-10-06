@@ -47,13 +47,13 @@ def construir_preprocesador(num_cols: list[str], cat_cols: list[str]) -> ColumnT
         StandardScaler(),
     )
     categoricas = make_pipeline(
-        SimpleImputer(strategy="most_frequent"),
+        SimpleImputer(strategy="constant", fill_value="Sin dato"),
         OneHotEncoder(handle_unknown="infrequent_if_exist", min_frequency=100)
     )
     return ColumnTransformer([
         ("num", numericas, num_cols),
         ("cat", categoricas, cat_cols)
-    ], verbose_feature_names_out=True)
+    ])
 
 def construir_modelo(num_cols: list[str], cat_cols: list[str], C: float = 1.0) -> Pipeline:
     """Pipeline completo: limpieza -> preprocesamiento -> regresión logística."""
