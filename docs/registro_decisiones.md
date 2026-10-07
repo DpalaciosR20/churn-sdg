@@ -78,18 +78,45 @@ Riesgos: El modelo puede perder algo de desempeño. Además, otras variables pod
 ## D-011 - Elección de modelo final
 Fecha: 05/10/2026
 
-Contexto: Luego de haber superado la línea base con el algoritmo de regresión logística (0.61), y luego de experimentar con otros algoritmos (DecisionTreeClassifier, RandomForestClassifier y LGBMClassifier) encontré que el modelo que mejor se comportaba era el de LGBMClassifier. Luego con este hice experimentaciones con distints hiperparámetros de manera heurística.
+Contexto: La regresión logística (baseline) dio un AUC de validación de 0.610 y mostró subajuste: train y validación casi iguales, y cambiar C no modificaba el resultado. La razón de esto es que el modelo lineal no puede representar relaciones como la de months, que tiene un pico cerca del año. Hacía falta un modelo no lineal.
 
-Opiones:
-|     | configuración | train | val | brecha |
+Opiones consideradas (validación cruzada de 5 pliegues sobre train, métrica ROC-AUC):
+| Modelo | train | validación | brecha |
+| --- | --- | --- | --- |
+| Regla eqpdays | — | 0.575 | — |
+| Regresión logística | 0.612 | 0.610 | 0.002 |
+| Árbol de decisión sin límite | 1.000 | 0.548 | 0.452 |
+| Random Forest | 0.739 | 0.667 | 0.072 |
+| LightGBM por defecto | 0.739 | 0.680 | 0.059 |
+| LightGBM cfg_2 | 0.729 | 0.683 | 0.046 |
+| LightGBM cfg_3 (sin restricciones) | 0.988 | 0.662 | 0.326 |
+| LightGBM "regularizada" | 0.715 | 0.680 | 0.035 |
+| LightGBM "profunda" | 0.778 | 0.683 | 0.095 |
+| LightGBM dart | 0.715 | 0.679 | 0.036 |
+
+Decisión: LightGBM con la configuración "regularizada".
+
+Justificación:
+- LightGBM supera a la logística por 0.07 de AUC y a Random Forest por 0.013.
+- Entre las configuraciones de LightGBM, cfg_2 y "regularizada" tienen 0.002 más de AUC, pero esa diferencia es menor que la variación entre pliegues (~0.003): es un empate. Entre modelos empatados elegí el de menor brecha entre train y validación, es decir, el que menos sobreajusta.
+- La logística es más interpretable, pero la diferencia de desempeño es grande, y la iterpretabilidad se recupera con SHAP.
+
+Hiperparámetros del modelo final y su función:
+- n_estimators=300 y learning_rate=0.05: 300 árboles con aporte pequeño cada uno. Aprender en pasos pequeños generaliza mejor que pocos árboles con aporte grande.
+- num_leaves=15: máximo de grupos finales por árbol. Limita la complejidad.
+- max_depth=5: máximo de condiciones encadenadas. Evita reglas demasiado específicas, porque LightGBM tiende a hacer crecer ramas muy profundas.
+- min_child_samples=50: ninguna hoja con menos de 50 clientes, para no aprender de grupos chicos.
+- colsample_bytree=0.8: cada árbol usa el 80% de las columnas al azar. Hace a los árboles más distintos entre sí y ayuda con variables redundantes.
+- reg_lambda=0.5 y reg_alpha=0.1: penalizan los valores extremos de las hojas. No medí su efecto por separado
+
+Resultado en test (evaluando una sola vez, con el modelo ya elegido):
+| Modelo | AUC | precision@10% | lift@10% | precision@20% |
 | --- | --- | --- | --- | --- |
-| 0   | default | 0.738928 | 0.680010 | 0.058918 |
-| 1   | cfg_2 | 0.728851 | 0.682635 | 0.046216 |
-| 2   | cfg_3 | 0.987739 | 0.661611 | 0.326128 |
-| 3   | regularizada | 0.715042 | 0.680393 | 0.034650 |
-| 4   | profunda | 0.778020 | 0.682799 | 0.095221 |
-| 5   | dart | 0.714886 | 0.678919 | 0.035967 |
+| Regla 'eqpdays' | 0.571 | 58% | 1.18 | 56% |
+| Logística | 0.607 | 64% | 1.3 | 62% |
+| LightGBM | 0.680 | 78% | 1.58 | 72% |
 
-Decisión: Decidí irme por la configuración 'regularizada'.
-
-Justificación: Se puede ver que los valores de train y val no distan mucho uno del otro, apenas 0.035 siendo la brecha más corta, demostrando así tener un menor grado de sobreajuste y superando a la regresión logística en val (61%) por ~7 puntos. A pesar de que Regresión Logística es más interpretable, la diferencia de desempeño es lo suficientemente considerable para decidir cambiar de algoritmo por uno que ofreciera un mejor desempeño más aún en términos de precisión.
+Riesgos y limitaciones:
+- El AUC de 0.68 indica una señal moderada: el modelo ordena a los clientes mejor que las alternativas, pero no identifica con certeza quién se va.
+- La búsqueda de hiperparámetros fue manual, con 6 configuraciones. Una búsqueda sistemática (por ejemplo, con Optuna) podría mejorar algo; queda como siguiente paso.
+- el dataset está balanceado al 50%. En producción, con el churn real, la precisión sería mucho menor y las probabilidades habría que recalibrarlas.
