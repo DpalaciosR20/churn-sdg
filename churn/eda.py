@@ -37,7 +37,7 @@ def graficar_tasa(
     
     ax.bar(tabla.index.astype(str), tabla["tasa_churn"], color="#4C72B0")
     ax.axhline(promedio, color="gray", linestyle="--", label=f"Promedio {promedio:.1%}")
-    ax.yaxis.set_major_formatter(PercentFormatter(1.0))   # 0.53 → 53%
+    ax.yaxis.set_major_formatter(PercentFormatter(1.0))
     ax.set_title(titulo, loc="left", fontweight="bold", fontsize=10)
     ax.tick_params(axis="x", rotation=45, labelsize=8)
     ax.legend(frameon=False, fontsize=8)
