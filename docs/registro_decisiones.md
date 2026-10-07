@@ -92,4 +92,4 @@ Opiones:
 
 Decisión: Decidí irme por la configuración 'regularizada'.
 
-Justificación: Se puede ver que los valores de train y val no distan mucho uno del otro, apenas 0.035 siendo la brecha más corta, demostrando así tener un menor grado de sobreajuste y superando a la regresión logística en val (61%) por ~7 puntos. A pesar de que Regresión Logística es más interpretable, la diferencia de desempeño es lo suficientemente considerable para decidir cambiar de algoritmo por uno que ofreciera un mejor desempeño.
+Justificación: Se puede ver que los valores de train y val no distan mucho uno del otro, apenas 0.035 siendo la brecha más corta, demostrando así tener un menor grado de sobreajuste y superando a la regresión logística en val (61%) por ~7 puntos. A pesar de que Regresión Logística es más interpretable, la diferencia de desempeño es lo suficientemente considerable para decidir cambiar de algoritmo por uno que ofreciera un mejor desempeño más aún en términos de precisión.
