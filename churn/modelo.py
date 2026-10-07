@@ -51,24 +51,16 @@ def construir_preprocesador(num_cols: list[str], cat_cols: list[str], escalar=Tr
         SimpleImputer(strategy="constant", fill_value="Sin dato"),
         OneHotEncoder(handle_unknown="infrequent_if_exist", min_frequency=100)
     )
-    
+
     return ColumnTransformer([
         ("num", numericas if escalar else "passthrough", num_cols),
         ("cat", categoricas, cat_cols)
     ])
 
 def construir_modelo(num_cols: list[str], cat_cols: list[str], estimador, escalar: bool=True) -> Pipeline:
-    """Pipeline completo: limpieza -> preprocesamiento -> regresión logística."""
+    """Pipeline completo: limpieza -> preprocesamiento -> estimador."""
     return Pipeline([
         ("limpieza", FunctionTransformer(limpiar_negativos, feature_names_out="one-to-one")),
         ("pre", construir_preprocesador(num_cols, cat_cols, escalar)),
         ("clf", estimador),
-    ])
-
-def construir_modelo_DecisionTreeClassifier(num_cols: list[str], cat_cols: list[str], max_depth: int) -> Pipeline:
-    """Pipeline completo: limpieza -> preprocesamiento -> regresión logística."""
-    return Pipeline([
-        ("limpieza", FunctionTransformer(limpiar_negativos, feature_names_out="one-to-one")),
-        ("pre", construir_preprocesador(num_cols, cat_cols)),
-        ("clf", DecisionTreeClassifier(max_depth=max_depth)),
     ])

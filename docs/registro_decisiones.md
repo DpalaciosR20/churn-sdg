@@ -88,7 +88,8 @@ Opiones:
 | 2   | cfg_3 | 0.987739 | 0.661611 | 0.326128 |
 | 3   | regularizada | 0.715042 | 0.680393 | 0.034650 |
 | 4   | profunda | 0.778020 | 0.682799 | 0.095221 |
+| 5   | dart | 0.714886 | 0.678919 | 0.035967 |
 
 Decisión: Decidí irme por la configuración 'regularizada'.
 
-Justificación: Se puede ver que los valores de train y val no distan mucho uno del otro, apenas 3.4 puntos porcentuales siendo la brecha más corta, demostrando así que no hay riesgo de overfitting y superando a aregresión logística en val (61%) por ~7 puntos. A pesar de que Regresión Logística es más interpretable, la diferencia de desempeño es lo suficientemente considerable para decidir cambiar de algoritmo por uno que ofreciera un mejor desempeño.
+Justificación: Se puede ver que los valores de train y val no distan mucho uno del otro, apenas 0.035 siendo la brecha más corta, demostrando así tener un menor grado de sobreajuste y superando a la regresión logística en val (61%) por ~7 puntos. A pesar de que Regresión Logística es más interpretable, la diferencia de desempeño es lo suficientemente considerable para decidir cambiar de algoritmo por uno que ofreciera un mejor desempeño.
