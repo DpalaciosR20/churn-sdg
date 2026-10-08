@@ -1,8 +1,8 @@
 import shap
 import pandas as pd
 
-def calcular_shap(modelo, X, n_muestra=2000,semilla=42) -> shap.Explanation:
-    """Regresa (X_train, valores): los clientes muestrados y su explicación SHAP, alineados."""
+def calcular_shap(modelo, X, n_muestra=2000,semilla=42) -> tuple:
+    """Regresa (X_muestra, valores): los clientes muestrados y su explicación SHAP, alineados."""
     X_muestra = X.sample(n=min(n_muestra, len(X)), random_state=semilla)
     
     preprocesamiento = modelo[:-1]  # todos los pasos menos el clasificador

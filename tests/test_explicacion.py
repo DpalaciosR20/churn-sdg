@@ -43,7 +43,7 @@ def test_shap_reconstruye_la_probabilidad(modelo_y_datos):
 
     assert np.allclose(prob_shap, prob_modelo, atol=1e-6)
     
-def cantidad_de_valores_shap_igual_a_n_muestra(modelo_y_datos):
+def test_cantidad_de_valores_shap_igual_a_n_muestra(modelo_y_datos):
     """
     Verifica que valores.values tenga tantas filas como n_muestra
     """
@@ -53,7 +53,7 @@ def cantidad_de_valores_shap_igual_a_n_muestra(modelo_y_datos):
 
     assert len(valores.values) == n
 
-def calcular_shap_no_falla_con_n_mayor_a_filas(modelo_y_datos):
+def test_calcular_shap_no_falla_con_n_mayor_a_filas(modelo_y_datos):
     """
     Verifica que la función calcular_shap no falle si se piden más filas de las que hay (n_muestra=10_000 con 400 datos)
     """
@@ -62,7 +62,7 @@ def calcular_shap_no_falla_con_n_mayor_a_filas(modelo_y_datos):
     
     assert calcular_shap(modelo, X, n_muestra=(filas_max*2))
 
-def X_muestra_y_valores_alineados(modelo_y_datos):
+def test_X_muestra_y_valores_alineados(modelo_y_datos):
     modelo, X = modelo_y_datos
     X_muestra, valores = calcular_shap(modelo, X, n_muestra=50)
 
