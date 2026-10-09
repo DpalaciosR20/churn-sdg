@@ -1,0 +1,11 @@
+FROM apache/airflow:3.3.2
+
+# LightGBM necesita esta librería del sistema; se instala como root
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libgomp1 \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+USER airflow
+
+COPY requirements-airflow.txt /requirements-airflow.txt
+RUN pip install --no-cache-dir "apache-airflow==${AIRFLOW_VERSION}" -r /requirements-airflow.txt
