@@ -3,6 +3,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parents[1]      # la carpeta que contiene a churn/
 DATA_DIR = BASE_DIR / "data"
 MODELS_DIR = BASE_DIR / "models"
+AUC_MINIMO = 0.65
 
 SEMILLA = 42
 TEST_SIZE = 0.2

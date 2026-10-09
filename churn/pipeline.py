@@ -92,8 +92,15 @@ def evaluar(ruta_modelo_pkl, ruta_test) -> dict:
     k_10 = int(0.10 * len(y_test))
     k_20 = int(0.20 * len(y_test))
 
+    auc_score = roc_auc_score(y_test, scores)
+
+    # --- Control de Calidad ---
+    if auc_score < config.AUC_MINIMO:
+        raise ValueError(f"El modelo no cumple con la calidad mínima. AUC obtenido: {auc_score:.3f}, Mínimo requerido: {config.AUC_MINIMO}")
+    # --------------------------
+
     datos_evaluacion = {
-        "AUC": f"{roc_auc_score(y_test, scores):.3f}",
+        "AUC": f"{auc_score:.3f}",
         "precision@10%": f"{precision_at_k(y_test, scores,k_10):.0%}",
         "lift@10%": f"{lift_at_k(y_test, scores,k_10):.3}",
         "precision@20%": f"{precision_at_k(y_test, scores,k_20):.0%}",
@@ -101,6 +108,9 @@ def evaluar(ruta_modelo_pkl, ruta_test) -> dict:
 
     df_evaluacion = pd.DataFrame(datos_evaluacion, index=[0])
     log.info(f"\n{df_evaluacion.to_string(index=False)}")
+
+    if auc < config.UMBRAL_CALIDAD_MODELO:
+        raise ValueError("El modelo no ha superado el AUC mínimo. Umbral:", config.UMBRAL_CALIDAD_MODELO)
 
     json_file = Path_ruta_modelo_pkl.parent / "metricas.json"
     
