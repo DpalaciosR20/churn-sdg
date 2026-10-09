@@ -6,3 +6,5 @@ data/
 !.env.example
 logs/
 config/airflow.cfg
+models/
+data/*.parquet

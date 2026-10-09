@@ -30,12 +30,16 @@ Justificación: Usar la versión actual me ayudaa a adaptarme a una tecnología 
 Consecuencias / riesgos: La documentación y los tutoriales de Airflow 2 no aplican tal cual. Se mitiga usando la documentación oficial de la 3.3.2.
 
 ## D-005 - Cómo accede Airflow al paquete churn
-Fecha: 03/10/2026
-Contexto: Al intentar usar un módulo del paquete churn/ en un DAG, apareció un error de importación (ModuleNotFoundError: No module named 'churn') indicando que no se encontraba el módulo. El error era que el contendor no estaba viendo la ruta de churn/ y, además, había un problema con dónde busca Python los paquetes, no estaba ahí en el syspath la ruta del paquete churn/.
-Opciones consideradas: (A) Copiar el código del paquete dentro de dags/, (B) Moverlo a plugins/, que Airflow agrega a sys.path automáticamente, (C) montar churn/ como volumen y declarar PYTHONPATH, (D) Construir una imagen propia Airflow con el paquete instalado.
-Decisión: (C) montar churn/ como volumen y declarar PYTHONPATH. El volumen ./churn:/opt/airflow/churn y PYTHONPATH=/opt/airflow, ambos en el bloque compartido x-airflow-common
-Justificación: Este mismo paquete de churn/ lo usan mis tests así que, para no tener código duplicado, ayuda tenerlo en una misma carpeta, además, tenerlo en un volumen, ayuda a que los cambios se vean al instante sin reconstruir nada así que eso ahorra tiempo. plugins/ es una carpeta para extender Airflow, no para la lógica de negocio; los tests tendrías que iportar desde una carpeta de Airflow.Usar ina imagen propia es la opción correcta para producción, pero en desarrollo obliga a reconstruir la imagen con cada cambio.
-Riesgos: Al estar trabajando con ramas en git para el control de versiones, si cambio de rama y la carpeta se borra y se recrea, se perderá visibilidad de este paquete; para esto deberé hacer 'docker compose down' y 'up -d' después de cambiar de rama. En un entorno real, sin carpetas compartidas, este enfoque no ayudaría porque no se tendría la visibilidad de manera directa, sin reconstruir, de este paquete; ahí se usaría la opción D (imagen con el paquete instalado).Esta solución aplica para el contexto del proyecto actual.
+**Fecha:** 03/10/2026\
+**Contexto:** Al intentar usar un módulo del paquete churn/ en un DAG, apareció un error de importación (ModuleNotFoundError: No module named 'churn') indicando que no se encontraba el módulo. El error era que el contendor no estaba viendo la ruta de churn/ y, además, había un problema con dónde busca Python los paquetes, no estaba ahí en el syspath la ruta del paquete churn/.\
+**Opciones consideradas:**\
+**(A)** Copiar el código del paquete dentro de dags/,\
+**(B)** Moverlo a plugins/, que Airflow agrega a sys.path automáticamente,\
+**(C)** montar churn/ como volumen y declarar PYTHONPATH,\
+**(D)** Construir una imagen propia Airflow con el paquete instalado.\
+**Decisión:** (C) montar churn/ como volumen y declarar PYTHONPATH. El volumen ./churn:/opt/airflow/churn y PYTHONPATH=/opt/airflow, ambos en el bloque compartido x-airflow-common\
+**Justificación:** Este mismo paquete de churn/ lo usan mis tests así que, para no tener código duplicado, ayuda tenerlo en una misma carpeta, además, tenerlo en un volumen, ayuda a que los cambios se vean al instante sin reconstruir nada así que eso ahorra tiempo. plugins/ es una carpeta para extender Airflow, no para la lógica de negocio; los tests tendrías que iportar desde una carpeta de Airflow.Usar ina imagen propia es la opción correcta para producción, pero en desarrollo obliga a reconstruir la imagen con cada cambio.\
+**Riesgos:** Al estar trabajando con ramas en git para el control de versiones, si cambio de rama y la carpeta se borra y se recrea, se perderá visibilidad de este paquete; para esto deberé hacer 'docker compose down' y 'up -d' después de cambiar de rama. En un entorno real, sin carpetas compartidas, este enfoque no ayudaría porque no se tendría la visibilidad de manera directa, sin reconstruir, de este paquete; ahí se usaría la opción D (imagen con el paquete instalado).Esta solución aplica para el contexto del proyecto actual.
 
 ## D-006 - Cómo leer el CSV con pandas
 Fecha: 04/10/2026
@@ -120,3 +124,36 @@ Riesgos y limitaciones:
 - El AUC de 0.68 indica una señal moderada: el modelo ordena a los clientes mejor que las alternativas, pero no identifica con certeza quién se va.
 - La búsqueda de hiperparámetros fue manual, con 6 configuraciones. Una búsqueda sistemática (por ejemplo, con Optuna) podría mejorar algo; queda como siguiente paso.
 - el dataset está balanceado al 50%. En producción, con el churn real, la precisión sería mucho menor y las probabilidades habría que recalibrarlas.
+
+Después de la evaluación en test retiré actvsubs por su redundancia con uniqsubs; las métricas no cambiaron
+
+## D-012 - Imágen propia de Airflow y artefactos en un volumen
+**Fecha:** 08/10/2026
+
+**Contexto:** Para ejecutar el DAG de punta a punta, el contenedor de Airflow necesita librerías que no vienen en su imagen oficial (lightgbm y shap) y, además, un mecanismo para leer y guardar los archivos generados (como `dataset.csv`, `.parquet`, `.pkl` y `.json`).
+
+**Opciones consideradas:**\
+**(A)** Usar la variable de entorno `_PIP_ADDITIONAL_REQUIREMENTS` para que el contenedor instale las dependencias al arrancar, y guardar archivos directamente en su sístema efímero.\
+**(B)** Construir una imagen Docker propia (extendida) con un `Dockerfile.airflow` y pontar volúmenes locales para las carpetas `data/` y `models/`.
+
+**Decisión:** (B) Construir una imagen propia y montar las carpetas de artefactos como volúmenes (`.data:/opt/airflow/data` y `.models:/opt/airflow/models`).
+
+**Justificación:** Usar `_PIP_ADDITIONAL_REQUIREMENTS` es una mala práctica para producción: descarga e instala las librerías cada vez que el contenedor arranca, lo que hace el proceso lento y sumamente frágil (puede fallar por problemas de red o porque `pip` resulva dependencias distintas). Cargar las librerías en una imágen propia asegura consistencia y rapidez de despliegue. Por otro lado, usar volúmenes para `/data` y `/models` garantiza que los datos y el modelo serializado sobrevivan si el contenedor se apaga, y permite inspeccionarlos o consumirlos desde la laptop sin tener que entrar a la consola del contenedor.
+
+**Riesgos:** Cada vez que se agregue, actualice o elimine una librería en el archivo `requirements-airflow.txt`, será necesario reconstruir la imágen (`doceker compose build`) antes de levantar el contenedor, lo que agrega un paso extra al flujo de desarrollo en caso de cambios en dependencias. Mi laptop y el contenedor comparten la misma carpeta models/, así que una ejecución local pisa el artefacto de Airflow.\
+Para la demo: el último que escriba el modelo debe ser el DAG.
+
+## D-013 - Control de calidad del modelo mediante umbrales
+**Fecha:** 08/10/2026
+
+**Contexto:** El pipeline de Airflow completaba la evaluación y terminaba su ejecución en color verde sin importar el rendimiento del modelo. Esto implicaba que un modelo con un rendimiento deficiente (p. ej., un AUC pobrísimo) pasaría como exitoso y podría llegar a producción de forma silenciosa.
+
+**Opciones consideradas**:\
+**(A)** Limitarse a registrar las métricas en los logs y en XCom, dejando que un humano revise si el modelo es suficientemente bueno tras cada ejecución.
+**(B)** Configurar una regla estricta dentro del código que aborte la ejecución si no se cumple un estándar mínimo.
+
+**Decisión:** (B) Implementar una validación automática en la función `evaluar` que lance un `ValueError` si la métrica obtenida es inferior al umbral `AUC_MINIMO` definido en `config.py`.
+
+**Justificación:** El principio de un pipeline automatizado es fallar rápido y de forma ruidosa ante anomalías. Lanzar una excepción de Python provoca que la tarea de Airflow falle, deteniendo el flujo y evitando la entrega o uso de un modelo que no cumple con el estándar de calidad del negocio. Mantener el valor en `config.py` centraliza el criterio y evita números mágicos dentro del código del pipeline.
+
+**Riesgos:** El DAG se vuelve menos tolerante. Una fluctuación estadística mínima (por ejemplo, obtener un AUC de 0.649 cuando el mínimo exigido es 0.650) causará la falla total de la tarea, lo que podría requerir intervención humana frecuente si los hiperparámetros o los datos de entrada son muy inestables.

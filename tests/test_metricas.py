@@ -1,5 +1,5 @@
 import pytest
-from churn.metricas import lift_at_k, tabla_ganancias
+from churn.metricas import lift_at_k, tabla_ganancias, captura_at_k
 
 @pytest.fixture
 def datos_toy():
@@ -12,14 +12,35 @@ def datos_toy():
 def test_lift_at_k(datos_toy):
     y_true, scores = datos_toy
     
-    # Top 2: y_true son [1, 1]. Precisión = 1.0. Lift = 1.0 / 0.4 = 2.5
     assert lift_at_k(y_true, scores, k=2) == pytest.approx(2.5)
     
-    # Top 4: y_true son [1, 1, 0, 1]. Precisión = 0.75. Lift = 0.75 / 0.4 = 1.875
     assert lift_at_k(y_true, scores, k=4) == pytest.approx(1.875)
     
-    # Top 10 (Todos): Precisión = 0.4. Lift = 0.4 / 0.4 = 1.0
     assert lift_at_k(y_true, scores, k=10) == pytest.approx(1.0)
+
+def test_captura_at_k_logica_correcta():
+    y_true = [1,   0,   1,   1,   0]
+    scores = [0.9, 0.8, 0.7, 0.4, 0.1] 
+    
+    resultado_k2 = captura_at_k(y_true, scores, k=2)
+    assert resultado_k2 == pytest.approx(1/3)
+ 
+    resultado_k4 = captura_at_k(y_true, scores, k=4)
+    assert resultado_k4 == 1.0
+
+def test_captura_at_k_division_por_cero():
+    y_true = [0, 0, 0]
+    scores = [0.9, 0.5, 0.1]
+    
+    assert captura_at_k(y_true, scores, k=2) == 0.0
+
+def test_captura_at_k_hereda_excepciones():
+    y_true = [1, 0, 1]
+    scores = [0.9, 0.8, 0.1]
+    
+    with pytest.raises(ValueError, match="el valor de 'k' es incorrecto"):
+        captura_at_k(y_true, scores, k=5)
+
 
 def test_tabla_ganancias(datos_toy):
     y_true, scores = datos_toy

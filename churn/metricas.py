@@ -21,6 +21,12 @@ def lift_at_k(y_true: list[int], scores: list[float], k: int) -> float:
 
     return prec_k / tasa_base
 
+def captura_at_k(y_true, scores, k) -> float:
+    """Proporción de todos los churners que queda dentro de los k clientes de mayor score."""
+    churners_en_top = precision_at_k(y_true, scores, k) * k
+    if sum(y_true) == 0: return 0.0
+    return churners_en_top / sum(y_true)
+
 def tabla_ganancias(y_true: list[int], scores: list[int], n_grupos: int=10) -> pd.DataFrame:
     tasa_base = np.mean(y_true)
     total_churners = np.sum(y_true)
