@@ -15,8 +15,7 @@ def dividir_datos(
         semilla: int = 42
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
     """Divide el dataset en entrenamiento y prueba manteniendo la proporción de la variable objetivo."""
-    # Se excluye Customer_ID ya que no es una variable que demuestre el comportamiento real del cliente y un ID muy alto o muy bajo podría sesgar el modelo en su entrenamiento.
-    X = df.drop(columns=[target, 'Customer_ID'])
+    X = df.drop(columns=[target])
     y = df[target]
 
     X_train, X_test, y_train, y_test = train_test_split(
