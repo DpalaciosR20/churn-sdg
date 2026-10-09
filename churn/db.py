@@ -2,7 +2,7 @@ import os
 import pandas as pd
 from sqlalchemy import create_engine, Engine, inspect, text
 
-URL_LOCAL = f"postgresql+psycopg2://{os.getenv("CHURN_DB_USER")}:{os.getenv("CHURN_DB_PASSWORD")}@localhost:5433/{os.getenv("CHURN_DB")}"
+URL_LOCAL = "postgresql+psycopg2://churn:churn@localhost:5433/churn"
 
 def obtener_engine() -> Engine:
     """Crea y regresa el engine de SQLAlchemy tomando la URL del entorno."""

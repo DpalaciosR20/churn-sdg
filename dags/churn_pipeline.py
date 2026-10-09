@@ -1,6 +1,6 @@
 import logging
 import pendulum
-from airflow.sdk import dag, task
+from airflow.sdk import dag, task, get_current_context
 
 log = logging.getLogger(__name__)
 
@@ -29,9 +29,18 @@ def churn_pipeline():
     @task
     def evaluar_modelo(ruta_test:str, ruta_modelo:str) -> dict:
         from churn import pipeline
-        return pipeline.evaluar(ruta_test, ruta_modelo)
+        from airflow.sdk import get_current_context
+        run_id = get_current_context()["run_id"]
+        return pipeline.evaluar(ruta_test, ruta_modelo, run_id)
 
+    @task
+    def generar_predicciones(ruta_test:str, ruta_modelo:str):
+        from churn import pipeline
+        pipeline.predecir(ruta_test, ruta_modelo)
+    
     datos = preparar_datos()
-    evaluar_modelo(datos["test"], entrenar_modelo(datos["train"]))
+    ruta_modelo = entrenar_modelo(datos["train"])
+    evaluar_modelo(datos["test"], ruta_modelo)
+    generar_predicciones(datos["test"], ruta_modelo)
 
 churn_pipeline()                           # registra el DAG
