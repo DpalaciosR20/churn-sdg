@@ -24,15 +24,14 @@ def churn_pipeline():
     @task
     def entrenar_modelo(ruta_train: str) -> str:
         from churn import pipeline
-        ruta_modelo = "models/modelo.pkl"
-        return pipeline.entrenar(ruta_train, ruta_modelo)
+        return pipeline.entrenar(ruta_train)
     
     @task
-    def evaluar_modelo(ruta_modelo: str, ruta_test:str) -> None:
+    def evaluar_modelo(ruta_test:str, ruta_modelo:str) -> dict:
         from churn import pipeline
-        pipeline.evaluar(ruta_modelo, ruta_test)
+        return pipeline.evaluar(ruta_test, ruta_modelo)
 
     datos = preparar_datos()
-    evaluar_modelo(entrenar_modelo(datos["train"]), datos["test"])
+    evaluar_modelo(datos["test"], entrenar_modelo(datos["train"]))
 
 churn_pipeline()                           # registra el DAG

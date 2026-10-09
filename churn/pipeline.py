@@ -6,7 +6,7 @@ import pandas as pd
 from churn import config
 from churn.datos import cargar_datos
 from churn.modelo import dividir_datos, construir_modelo
-from churn.metricas import precision_at_k, lift_at_k
+from churn.metricas import precision_at_k, lift_at_k, captura_at_k
 from lightgbm import LGBMClassifier
 from sklearn.metrics import roc_auc_score
 
@@ -37,7 +37,7 @@ def preparar(ruta_csv: Path = config.DATA_DIR / "dataset.csv",
 
     return {nombre: str(ruta) for nombre, ruta in rutas.items()}    # texto: XCom no acepta Path
 
-def entrenar(ruta_train, ruta_modelo_pkl) -> str:
+def entrenar(ruta_train, ruta_modelo_pkl = config.RUTA_MODELO) -> str:
     """Lee el parquet, separa X e y, construye el pipeline con config, lo ajusta, lo guarda con pickle (crea la carpeta models/ si no existe) y regresa la ruta"""
     
     Path_ruta_train = Path(ruta_train)
@@ -67,7 +67,7 @@ def entrenar(ruta_train, ruta_modelo_pkl) -> str:
 
     return str(Path_ruta_modelo)
 
-def evaluar(ruta_modelo_pkl, ruta_test) -> dict:
+def evaluar(ruta_test, ruta_modelo_pkl = config.RUTA_MODELO) -> dict:
     """
     Carga el picle, predice probabilidades, calcula AUC,
     precision@10%, lift@10% y captura@20%
@@ -94,34 +94,37 @@ def evaluar(ruta_modelo_pkl, ruta_test) -> dict:
 
     auc_score = roc_auc_score(y_test, scores)
 
+    metricas = {
+        "auc": auc_score,
+        "precision_at_10": precision_at_k(y_test, scores,k_10),
+        "lift_at_10": lift_at_k(y_test, scores,k_10),
+        "precision_at_20": precision_at_k(y_test, scores,k_20),
+        "captura_at_20": captura_at_k(y_test, scores, k_20)
+    }
+
+    log.info(
+        "AUC=%.3f | precision@10%%=%.1f%% | lift@10%%=%.2f | precision@20%%=%.1f%%  | captura@20%%=%.1f%%",
+        metricas["auc"],
+        metricas["precision_at_10"] * 100,
+        metricas["lift_at_10"],
+        metricas["precision_at_20"] * 100,
+        metricas["captura_at_20"] * 100,
+    )
+
     # --- Control de Calidad ---
     if auc_score < config.AUC_MINIMO:
         raise ValueError(f"El modelo no cumple con la calidad mínima. AUC obtenido: {auc_score:.3f}, Mínimo requerido: {config.AUC_MINIMO}")
     # --------------------------
 
-    datos_evaluacion = {
-        "AUC": f"{auc_score:.3f}",
-        "precision@10%": f"{precision_at_k(y_test, scores,k_10):.0%}",
-        "lift@10%": f"{lift_at_k(y_test, scores,k_10):.3}",
-        "precision@20%": f"{precision_at_k(y_test, scores,k_20):.0%}",
-    }
-
-    df_evaluacion = pd.DataFrame(datos_evaluacion, index=[0])
-    log.info(f"\n{df_evaluacion.to_string(index=False)}")
-
-    if auc < config.UMBRAL_CALIDAD_MODELO:
-        raise ValueError("El modelo no ha superado el AUC mínimo. Umbral:", config.UMBRAL_CALIDAD_MODELO)
-
     json_file = Path_ruta_modelo_pkl.parent / "metricas.json"
     
     log.info(f"Guardando métricas en formato JSON en: {json_file}")
     with open(json_file, "w", encoding="utf-8") as archivo:
-        json.dump(datos_evaluacion, archivo, indent=4, ensure_ascii=False)
+        json.dump(metricas, archivo, indent=4, ensure_ascii=False)
 
-    return str(json_file)
+    return metricas
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     rutas = preparar()
-    ruta_modelo_pkl = config.BASE_DIR / "models" /"modelo_LightGBM.pkl"
-    evaluar(entrenar(rutas["train"],ruta_modelo_pkl), rutas["test"])
+    evaluar(rutas["test"], entrenar(rutas["train"]))

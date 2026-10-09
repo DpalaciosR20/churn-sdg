@@ -3,6 +3,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parents[1]      # la carpeta que contiene a churn/
 DATA_DIR = BASE_DIR / "data"
 MODELS_DIR = BASE_DIR / "models"
+RUTA_MODELO = MODELS_DIR / "modelo.pkl"
 AUC_MINIMO = 0.65
 
 SEMILLA = 42
@@ -43,14 +44,12 @@ CAT_COLS = [
     "hnd_webcap",   # Handset web capability
 ]
 HIPERPARAMETROS = {
-    "learning_rate": 0.05,   # cuánto aporta cada árbol. Cada árbol corrige los errores de los anteriores, pero su corrección se multiplica por 0.05, así que avanza en pasos pequeños.
+    "learning_rate": 0.05,   # cuánto aporta cada árbol.
     "n_estimators": 300,      # el número de árboles.
     "num_leaves": 15,        # el máximo de hojas (grupos finales) por árbol. limita cuántos grupos crea el árbol.
-    "max_depth": 5,          # el máximo de preguntas encadenadas desde la raíz hasta una hoja. limita qué tan específica puede ser una regla. Con profundidad 5, cada grupo se define con 5 condiciones como máximo ("teléfono viejo y uso en caída y…").
+    "max_depth": 5,          # el máximo de preguntas encadenadas desde la raíz hasta una hoja. limita qué tan específica puede ser una regla.
     "min_child_samples": 50, # ninguna hoja puede tener menos de 50 clientes. no sacar conclusiones de grupos chicos.
     "colsample_bytree": 0.8, # Usa solo el 80% de las columnas por árbol
-    
-    # Cada hoja tiene un valor: cuánto suma o resta al riesgo de los clientes que caen en ella. Estas penalizaciones hacen que esos valores sean más moderados:
     "reg_alpha": 0.1,        # puede llevar los valores pequeños exactamente a cero, y hace que los cortes con poca ganancia dejen de valer la pena.
     "reg_lambda": 0.5,       # encoge los valores de todas las hojas hacia cero, y encoge más a las que tienen poca evidencia
     "random_state": SEMILLA,

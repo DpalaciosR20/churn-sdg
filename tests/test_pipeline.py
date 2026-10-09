@@ -13,7 +13,7 @@ def test_preparar(tmp_path):
         "churn": [0, 1, 0, 1, 0, 1, 0, 1, 0, 1]
     })
     ruta_csv_tmp = tmp_path / "dataset_test.csv"
-    df_prueba.to_csv(ruta_csv_tmp, index=False)
+    df_prueba.to_csv(ruta_csv_tmp, index=False, sep=";", decimal=",")
 
     dir_salida_tmp = tmp_path
     rutas_generadas = preparar(ruta_csv=ruta_csv_tmp, dir_salida=dir_salida_tmp)

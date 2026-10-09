@@ -125,6 +125,8 @@ Riesgos y limitaciones:
 - La búsqueda de hiperparámetros fue manual, con 6 configuraciones. Una búsqueda sistemática (por ejemplo, con Optuna) podría mejorar algo; queda como siguiente paso.
 - el dataset está balanceado al 50%. En producción, con el churn real, la precisión sería mucho menor y las probabilidades habría que recalibrarlas.
 
+Después de la evaluación en test retiré actvsubs por su redundancia con uniqsubs; las métricas no cambiaron
+
 ## D-012 - Imágen propia de Airflow y artefactos en un volumen
 **Fecha:** 08/10/2026
 
