@@ -140,7 +140,8 @@ Después de la evaluación en test retiré actvsubs por su redundancia con uniqs
 
 **Justificación:** Usar `_PIP_ADDITIONAL_REQUIREMENTS` es una mala práctica para producción: descarga e instala las librerías cada vez que el contenedor arranca, lo que hace el proceso lento y sumamente frágil (puede fallar por problemas de red o porque `pip` resulva dependencias distintas). Cargar las librerías en una imágen propia asegura consistencia y rapidez de despliegue. Por otro lado, usar volúmenes para `/data` y `/models` garantiza que los datos y el modelo serializado sobrevivan si el contenedor se apaga, y permite inspeccionarlos o consumirlos desde la laptop sin tener que entrar a la consola del contenedor.
 
-**Riesgos:** Cada vez que se agregue, actualice o elimine una librería en el archivo `requirements-airflow.txt`, será necesario reconstruir la imágen (`doceker compose build`) antes de levantar el contenedor, lo que agrega un paso extra al flujo de desarrollo en caso de cambios en dependencias.
+**Riesgos:** Cada vez que se agregue, actualice o elimine una librería en el archivo `requirements-airflow.txt`, será necesario reconstruir la imágen (`doceker compose build`) antes de levantar el contenedor, lo que agrega un paso extra al flujo de desarrollo en caso de cambios en dependencias. Mi laptop y el contenedor comparten la misma carpeta models/, así que una ejecución local pisa el artefacto de Airflow.\
+Para la demo: el último que escriba el modelo debe ser el DAG.
 
 ## D-013 - Control de calidad del modelo mediante umbrales
 **Fecha:** 08/10/2026
