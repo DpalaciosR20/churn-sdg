@@ -79,6 +79,7 @@ x-airflow-common:
     # The following line can be used to set a custom config file, stored in the local config folder
     AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
     PYTHONPATH: '/opt/airflow/'
+    CHURN_DB_URL: "postgresql+psycopg2://${CHURN_DB_USER}:${CHURN_DB_PASSWORD}@churn-db:5432/${CHURN_DB}"
   volumes:
     - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
@@ -94,6 +95,28 @@ x-airflow-common:
       condition: service_healthy
 
 services:
+  churn-db:
+    image: postgres:16
+    environment:
+      CHURN_DB_USER: ${CHURN_DB_USER}
+      CHURN_DB_PASSWORD: ${CHURN_DB_PASSWORD}
+      CHURN_DB: ${CHURN_DB}
+    ports:
+      - "5433:5432"
+    volumes:
+      - churn-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CHURN_DB_USER} -d ${CHURN_DB}"]
+      interval: 5s
+      retries: 5
+    restart: always
+  
+  adminer:
+    image: adminer
+    ports:
+      - "8081:8080"
+    restart: always
+
   postgres:
     image: postgres:16
     environment:
@@ -280,3 +303,4 @@ services:
 
 volumes:
   postgres-db-volume:
+  churn-db-data:
