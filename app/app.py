@@ -4,25 +4,7 @@ import plotly.express as px
 from sqlalchemy import inspect
 
 from churn.db import obtener_engine, leer_sql
-
-ETIQUETAS_FACTOR = {
-    "eqpdays": "Antigüedad del teléfono",
-    "mou_Mean": "Minutos de uso mensual",
-    "months": "Antigüedad como cliente",
-    "change_mou": "Cambio en minutos de uso",
-    "hnd_price": "Precio del teléfono",
-    "ovrrev_Mean": "Cargo por excedentes",
-    "uniqsubs": "Líneas en el hogar",
-    "drop_vce_Mean": "Llamadas de voz interrumpidas",
-    "totmrc_Mean": "Cargo mensual del plan",
-    "change_rev": "Cambio en facturación",
-    "infobase_Sin dato": "Sin coincidencia de InfoBase",
-    "phones": "Teléfonos en la cuenta",
-    "rev_Mean": "Ingreso mensual del cliente",
-    "asl_flag_N": "Sin límite de gasto",
-    "drop_blk_Mean": "Llamadas bloqueadas o interrumpidas",
-}
-
+from churn.etiquetas import etiqueta
 
 st.set_page_config(page_title="Retención de clientes", layout="wide")
 
@@ -35,10 +17,6 @@ def engine():
 @st.cache_data(ttl=300)
 def consultar(sql: str, parametros: dict | None = None):
     return leer_sql(sql, engine(), parametros)
-
-
-def nombre_factor(factor: str) -> str:
-    return ETIQUETAS_FACTOR.get(factor, factor)
 
 
 st.title("Retención de clientes")
@@ -224,9 +202,9 @@ with tab_contactar:
         st.info("No hay clientes que cumplan estos filtros.")
     else:
         tabla_contacto = clientes_priorizados.copy()
-        tabla_contacto["Motivo principal"] = tabla_contacto["factor_1"].map(nombre_factor)
-        tabla_contacto["Motivo 2"] = tabla_contacto["factor_2"].map(nombre_factor)
-        tabla_contacto["Motivo 3"] = tabla_contacto["factor_3"].map(nombre_factor)
+        tabla_contacto["Motivo principal"] = tabla_contacto["factor_1"].map(etiqueta)
+        tabla_contacto["Motivo 2"] = tabla_contacto["factor_2"].map(etiqueta)
+        tabla_contacto["Motivo 3"] = tabla_contacto["factor_3"].map(etiqueta)
         tabla_contacto["Señal de uso"] = tabla_contacto["mou_Mean"].map(
             lambda minutos: (
                 "Posible abandono silencioso"
