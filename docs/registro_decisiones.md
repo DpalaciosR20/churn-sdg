@@ -30,15 +30,20 @@ Justificación: Usar la versión actual me ayudaa a adaptarme a una tecnología 
 Consecuencias / riesgos: La documentación y los tutoriales de Airflow 2 no aplican tal cual. Se mitiga usando la documentación oficial de la 3.3.2.
 
 ## D-005 - Cómo accede Airflow al paquete churn
-**Fecha:** 03/10/2026\
-**Contexto:** Al intentar usar un módulo del paquete churn/ en un DAG, apareció un error de importación (ModuleNotFoundError: No module named 'churn') indicando que no se encontraba el módulo. El error era que el contendor no estaba viendo la ruta de churn/ y, además, había un problema con dónde busca Python los paquetes, no estaba ahí en el syspath la ruta del paquete churn/.\
+**Fecha:** 03/10/2026
+
+**Contexto:** Al intentar usar un módulo del paquete churn/ en un DAG, apareció un error de importación (ModuleNotFoundError: No module named 'churn') indicando que no se encontraba el módulo. El error era que el contendor no estaba viendo la ruta de churn/ y, además, había un problema con dónde busca Python los paquetes, no estaba ahí en el syspath la ruta del paquete churn/.
+
 **Opciones consideradas:**\
 **(A)** Copiar el código del paquete dentro de dags/,\
 **(B)** Moverlo a plugins/, que Airflow agrega a sys.path automáticamente,\
 **(C)** montar churn/ como volumen y declarar PYTHONPATH,\
-**(D)** Construir una imagen propia Airflow con el paquete instalado.\
-**Decisión:** (C) montar churn/ como volumen y declarar PYTHONPATH. El volumen ./churn:/opt/airflow/churn y PYTHONPATH=/opt/airflow, ambos en el bloque compartido x-airflow-common\
-**Justificación:** Este mismo paquete de churn/ lo usan mis tests así que, para no tener código duplicado, ayuda tenerlo en una misma carpeta, además, tenerlo en un volumen, ayuda a que los cambios se vean al instante sin reconstruir nada así que eso ahorra tiempo. plugins/ es una carpeta para extender Airflow, no para la lógica de negocio; los tests tendrías que iportar desde una carpeta de Airflow.Usar ina imagen propia es la opción correcta para producción, pero en desarrollo obliga a reconstruir la imagen con cada cambio.\
+**(D)** Construir una imagen propia Airflow con el paquete instalado.
+
+**Decisión:** (C) montar churn/ como volumen y declarar PYTHONPATH. El volumen ./churn:/opt/airflow/churn y PYTHONPATH=/opt/airflow, ambos en el bloque compartido x-airflow-common
+
+**Justificación:** Este mismo paquete de churn/ lo usan mis tests así que, para no tener código duplicado, ayuda tenerlo en una misma carpeta, además, tenerlo en un volumen, ayuda a que los cambios se vean al instante sin reconstruir nada así que eso ahorra tiempo. plugins/ es una carpeta para extender Airflow, no para la lógica de negocio; los tests tendrías que iportar desde una carpeta de Airflow.Usar ina imagen propia es la opción correcta para producción, pero en desarrollo obliga a reconstruir la imagen con cada cambio.
+
 **Riesgos:** Al estar trabajando con ramas en git para el control de versiones, si cambio de rama y la carpeta se borra y se recrea, se perderá visibilidad de este paquete; para esto deberé hacer 'docker compose down' y 'up -d' después de cambiar de rama. En un entorno real, sin carpetas compartidas, este enfoque no ayudaría porque no se tendría la visibilidad de manera directa, sin reconstruir, de este paquete; ahí se usaría la opción D (imagen con el paquete instalado).Esta solución aplica para el contexto del proyecto actual.
 
 ## D-006 - Cómo leer el CSV con pandas
@@ -157,3 +162,18 @@ Para la demo: el último que escriba el modelo debe ser el DAG.
 **Justificación:** El principio de un pipeline automatizado es fallar rápido y de forma ruidosa ante anomalías. Lanzar una excepción de Python provoca que la tarea de Airflow falle, deteniendo el flujo y evitando la entrega o uso de un modelo que no cumple con el estándar de calidad del negocio. Mantener el valor en `config.py` centraliza el criterio y evita números mágicos dentro del código del pipeline.
 
 **Riesgos:** El DAG se vuelve menos tolerante. Una fluctuación estadística mínima (por ejemplo, obtener un AUC de 0.649 cuando el mínimo exigido es 0.650) causará la falla total de la tarea, lo que podría requerir intervención humana frecuente si los hiperparámetros o los datos de entrada son muy inestables.
+
+## D-014 - Base de datos propia y estrategias de escritura
+**Fecha:** 09/10/2026
+
+**Contexto:** Se requiere persistir los datos iniciales, las predicciones del modelo y el historial de métricas para que la aplicación (Streamlit) pueda consumirlos.
+
+**Opciones consideradas:**\
+**(A)** Reutilizar la base de datos de metadatos de Airflow.
+**(B)** Levantar un servicio de PostgreSQL independiente.
+
+**Decisión: (B)** Base de datos propia (`churn-db`). Para las tablas de estado (`clientes`, `predicciones`, `importancia_variables`) se usa la estrategia de sobreescritura total (`replace`). Para el historial (`metricas_modelo`) se usa borrado selectivo por `run_id` e inserción (`append`). Para las tablas `clientes`, `predicciones` e `importancia_variables`, se usa `replace`.
+
+**Justificación:** Mezclar datos de negocio con la base de metadatos de Airflow es una mala práctica; acopla la aplicación al orquestador y pone los datos analíticos en riesgo si Airflow se reinicia o destruye sus voolúmenes. Tener una base propia garantiza separación de responsabilidades.
+
+**Riesgos:** Requiere gestionar correctamente las URL de conexión (una interna para Docker y otra expuesta para desarrollo local) mediante variables de entorno, además de un ligero aumento en el consumo de RAM/CPU local al mantener un contenedor de base de datos adicional encendido.

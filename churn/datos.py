@@ -15,7 +15,8 @@ def cargar_datos(ruta: str) -> pd.DataFrame:
         sep=';',
         decimal=',',
         keep_default_na=False,
-        na_values=['']
+        na_values=[''],
+        index_col="Customer_ID"
     )
     return df
 

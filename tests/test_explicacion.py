@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 from lightgbm import LGBMClassifier
 from churn.modelo import construir_modelo
-from churn.explicacion import calcular_shap
+from churn.explicacion import calcular_shap, limpiar_nombre
 
 NUM_COLS = ["eqpdays", "rev_Mean", "totmrc_Mean", "avg6rev"]
 CAT_COLS = ["plan"]
@@ -67,3 +67,7 @@ def test_X_muestra_y_valores_alineados(modelo_y_datos):
     X_muestra, valores = calcular_shap(modelo, X, n_muestra=50)
 
     assert len(X_muestra) == len(valores)
+
+def test_limpiar_nombre():
+    assert limpiar_nombre("cat__hnd_webcap_NA") == "hnd_webcap_NA"
+    assert limpiar_nombre("num__eqpdays") == "eqpdays"
