@@ -162,3 +162,18 @@ Para la demo: el último que escriba el modelo debe ser el DAG.
 **Justificación:** El principio de un pipeline automatizado es fallar rápido y de forma ruidosa ante anomalías. Lanzar una excepción de Python provoca que la tarea de Airflow falle, deteniendo el flujo y evitando la entrega o uso de un modelo que no cumple con el estándar de calidad del negocio. Mantener el valor en `config.py` centraliza el criterio y evita números mágicos dentro del código del pipeline.
 
 **Riesgos:** El DAG se vuelve menos tolerante. Una fluctuación estadística mínima (por ejemplo, obtener un AUC de 0.649 cuando el mínimo exigido es 0.650) causará la falla total de la tarea, lo que podría requerir intervención humana frecuente si los hiperparámetros o los datos de entrada son muy inestables.
+
+## D-014 - Base de datos propia y estrategias de escritura
+**Fecha:** 09/10/2026
+
+**Contexto:** Se requiere persistir los datos iniciales, las predicciones del modelo y el historial de métricas para que la aplicación (Streamlit) pueda consumirlos.
+
+**Opciones consideradas:**\
+**(A)** Reutilizar la base de datos de metadatos de Airflow.
+**(B)** Levantar un servicio de PostgreSQL independiente.
+
+**Decisión: (B)** Base de datos propia (`churn-db`). Para las tablas de estado (`clientes`, `predicciones`, `importancia_variables`) se usa la estrategia de sobreescritura total (`replace`). Para el historial (`metricas_modelo`) se usa borrado selectivo por `run_id` e inserción (`append`). Para las tablas `clientes`, `predicciones` e `importancia_variables`, se usa `replace`.
+
+**Justificación:** Mezclar datos de negocio con la base de metadatos de Airflow es una mala práctica; acopla la aplicación al orquestador y pone los datos analíticos en riesgo si Airflow se reinicia o destruye sus voolúmenes. Tener una base propia garantiza separación de responsabilidades.
+
+**Riesgos:** Requiere gestionar correctamente las URL de conexión (una interna para Docker y otra expuesta para desarrollo local) mediante variables de entorno, además de un ligero aumento en el consumo de RAM/CPU local al mantener un contenedor de base de datos adicional encendido.

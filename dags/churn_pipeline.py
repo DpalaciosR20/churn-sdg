@@ -40,7 +40,8 @@ def churn_pipeline():
     
     datos = preparar_datos()
     ruta_modelo = entrenar_modelo(datos["train"])
-    evaluar_modelo(datos["test"], ruta_modelo)
-    generar_predicciones(datos["test"], ruta_modelo)
+    evaluacion = evaluar_modelo(datos["test"], ruta_modelo)
+    predicciones = generar_predicciones(datos["test"], ruta_modelo)
+    evaluacion >> predicciones
 
 churn_pipeline()                           # registra el DAG

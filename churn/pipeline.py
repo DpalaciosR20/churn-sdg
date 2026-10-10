@@ -12,7 +12,7 @@ from churn import config
 from churn.datos import cargar_datos
 from churn.modelo import dividir_datos, construir_modelo
 from churn.metricas import precision_at_k, lift_at_k, captura_at_k
-from churn.explicacion import calcular_shap
+from churn.explicacion import calcular_shap, limpiar_nombre
 from churn.db import obtener_engine, guardar_tabla, reemplazar_corrida
 
 
@@ -20,12 +20,13 @@ log = logging.getLogger(__name__)
 
 
 def preparar(ruta_csv: Path = config.DATA_DIR / "dataset.csv",
-             dir_salida: Path = config.DATA_DIR) -> dict:
+             dir_salida: Path = config.DATA_DIR,
+             engine=None) -> dict:
     """Carga el CSV, separa train y test, y los guarda en Parquet. Regresa las rutas."""
     log.info(f"Iniciando preparación de datos. Cargando CSV desde: {ruta_csv}")
     df = cargar_datos(ruta_csv)
 
-    engine = obtener_engine()
+    engine = engine or obtener_engine()
     guardar_tabla(df, "clientes", engine, modo="replace", index=True)
 
     log.debug(f"CSV cargado exitosamente. Dimensiones originales: {df.shape}")
@@ -75,7 +76,7 @@ def entrenar(ruta_train, ruta_modelo_pkl = config.RUTA_MODELO) -> str:
 
     return str(Path_ruta_modelo)
 
-def evaluar(ruta_test, ruta_modelo_pkl = config.RUTA_MODELO, run_id="local") -> dict:
+def evaluar(ruta_test, ruta_modelo_pkl = config.RUTA_MODELO, run_id="local", engine=None) -> dict:
     """
     Carga el picle, predice probabilidades, calcula AUC,
     precision@10%, lift@10% y captura@20%
@@ -127,7 +128,7 @@ def evaluar(ruta_test, ruta_modelo_pkl = config.RUTA_MODELO, run_id="local") -> 
         raise ValueError(f"El modelo no cumple con la calidad mínima. AUC obtenido: {auc_score:.3f}, Mínimo requerido: {config.AUC_MINIMO}")
     # --------------------------
 
-    engine = obtener_engine()
+    engine = engine or obtener_engine()
     df_metricas = pd.DataFrame([metricas])
     reemplazar_corrida(df_metricas, "metricas_modelo", run_id, engine, index=False)
 
@@ -139,7 +140,7 @@ def evaluar(ruta_test, ruta_modelo_pkl = config.RUTA_MODELO, run_id="local") -> 
 
     return metricas
 
-def predecir(ruta_test, ruta_modelo_pkl):
+def predecir(ruta_test, ruta_modelo_pkl, engine=None):
     """Genera predicciones, grupos de riesgo y extrae factores SHAP."""
     log.info("Iniciando generación de predicciones y explicabilidad...")
 
@@ -151,29 +152,28 @@ def predecir(ruta_test, ruta_modelo_pkl):
         modelo = pickle.load(f)
 
     riesgo = modelo.predict_proba(X_test)[:, 1]
-    grupo_riesgo = pd.qcut(riesgo, q=10, labels=[10,9,8,7,6,5,4,3,2,1])
-
     riesgo_series = pd.Series(riesgo, index=X_test.index)
-    grupo_riesgo_series = pd.Series(grupo_riesgo, index=X_test.index)
 
-    X_muestra, explicacion = calcular_shap(modelo, X_test, n_muestra=len(X_test))
+    grupo_riesgo_series = pd.qcut(riesgo_series.rank(method="first"), q=10, labels=[10,9,8,7,6,5,4,3,2,1])
+
+    X_muestra, explicacion = calcular_shap(modelo, X_test, n_muestra=None)
 
     valores_shap = explicacion.values
     if len(valores_shap.shape) == 3:
         valores_shap = valores_shap[:, :, 1]
 
-    nombres = np.array(explicacion.feature_names)
+    nombres = np.array([limpiar_nombre(n) for n in explicacion.feature_names])
     orden = np.argsort(-valores_shap, axis=1)[:, :3] 
     factores = nombres[orden]
 
     predicciones = pd.DataFrame({
-        "riesgo": riesgo_series.loc[X_muestra.index],
-        "grupo_riesgo": grupo_riesgo_series.loc[X_muestra.index],
-        "churn_real": y_test.loc[X_muestra.index],
+        "riesgo": riesgo_series.loc[X_muestra.index].astype('float32'),
+        "grupo_riesgo": grupo_riesgo_series.loc[X_muestra.index].astype('int16'),
+        "churn_real": y_test.loc[X_muestra.index].astype('int16'),
         "factor_1": factores[:, 0],
         "factor_2": factores[:, 1],
         "factor_3": factores[:, 2],
-    }, index=X_test.index)
+    }, index=X_muestra.index)
 
     importancia_global = np.abs(valores_shap).mean(axis=0)
     importancia_variables = pd.DataFrame({
@@ -181,7 +181,7 @@ def predecir(ruta_test, ruta_modelo_pkl):
         "importancia": importancia_global
     }).sort_values(by="importancia", ascending=False)
 
-    engine = obtener_engine()
+    engine = engine or obtener_engine()
     guardar_tabla(predicciones, "predicciones", engine, modo="replace", index=True)
     guardar_tabla(importancia_variables, "importancia_variables", engine, modo="replace", index=False)
 
