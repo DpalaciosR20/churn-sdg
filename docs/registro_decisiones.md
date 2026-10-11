@@ -177,3 +177,18 @@ Para la demo: el último que escriba el modelo debe ser el DAG.
 **Justificación:** Mezclar datos de negocio con la base de metadatos de Airflow es una mala práctica; acopla la aplicación al orquestador y pone los datos analíticos en riesgo si Airflow se reinicia o destruye sus voolúmenes. Tener una base propia garantiza separación de responsabilidades.
 
 **Riesgos:** Requiere gestionar correctamente las URL de conexión (una interna para Docker y otra expuesta para desarrollo local) mediante variables de entorno, además de un ligero aumento en el consumo de RAM/CPU local al mantener un contenedor de base de datos adicional encendido.
+
+## D-015 - Aplicación de negocio con Streamlit y PostgreSQL
+**Fecha:** 10/10/2026
+
+**Contexto:** Se necesita una interfaz para que una persona de negocio consulte el desempeño del modelo, priorice clientes, entienda predicciones individuales y explore los factores asociados al churn.
+
+**Opciones consideradas:**\
+**(A)** Cargar el modelo serializado y volver a calcular predicciones desde la interfaz cada vez que se consulta la app.\
+**(B)** Usar Streamlit como interfaz de lectura sobre los resultados que el pipeline ya persiste en PostgreSQL.
+
+**Decisión: (B)** Construir una aplicación Streamlit que consulta las tablas de PostgreSQL. Airflow y el pipeline son responsables de generar y persistir los datos; la interfaz no carga el archivo serializado ni entrena el modelo durante la navegación.
+
+**Justificación:** Streamlit permite crear y compartir rápidamente una interfaz Python para este proyecto. Leer los resultados persistidos mantiene separadas la presentación y la ejecución del pipeline, evita repetir inferencias por cada interacción y permite mostrar también métricas históricas y explicaciones guardadas. La base de datos funciona como contrato entre productor y consumidor.
+
+**Riesgos:** La aplicación depende de que PostgreSQL esté disponible y de que una corrida haya poblado las tablas. Si el pipeline no se ejecuta, la información puede estar vacía o desactualizada; por ello la app debe comunicar estados vacíos y la operación debe verificar las corridas antes de usar los resultados. Las métricas del conjunto de prueba tampoco deben interpretarse como resultados garantizados en producción.
