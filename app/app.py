@@ -81,7 +81,7 @@ with tab_resumen:
     st.info(
         f"Si contactamos al 10% de clientes con mayor riesgo, "
         f"{m['precision_at_10'] * 100:.0f} de cada 100 realmente se iban, "
-        f"contra {promedio_churn:.0%} al azar."
+        f"contra {promedio_churn * 100:.0f} de cada 100 al azar."
     )
 
     st.subheader("El modelo ordena a los clientes por riesgo")
@@ -181,7 +181,7 @@ with tab_contactar:
             "mou_Mean"
         FROM clientes_ordenados
         WHERE posicion_riesgo <= CEIL(total_clientes * :presupuesto_pct / 100.0)
-          AND "rev_Mean" >= :ingreso_minimo
+          AND ("rev_Mean" >= :ingreso_minimo OR "rev_Mean" IS NULL)
           AND (
               :excluir_silenciosos = FALSE
               OR "mou_Mean" <> 0
@@ -203,9 +203,12 @@ with tab_contactar:
     c1, c2, c3 = st.columns(3)
     c1.metric("Clientes seleccionados", f"{clientes_seleccionados:,}")
     c2.metric("Cancelaron (conjunto de prueba)", f"{churners_seleccionados:,}")
-    c3.metric("Ingreso mensual en juego", f"${ingreso_en_juego:,.2f}")
+    c3.metric(
+        "Ingreso mensual de los clientes seleccionados",
+        f"${ingreso_en_juego:,.2f}",
+    )
     st.caption(
-        "El ingreso en juego es la suma de rev_Mean de los clientes seleccionados; "
+        "Es la suma de rev_Mean de los clientes seleccionados; "
         "no equivale a ingreso que una campaña vaya a recuperar. "
         "El dato de cancelación solo se conoce aquí porque son datos de prueba."
     )
@@ -338,6 +341,7 @@ with tab_ficha:
 
         factores = [str(cliente[f"factor_{numero}"]) for numero in range(1, 4)]
         nombres_factores = [etiqueta(factor) for factor in factores]
+        razones_factores = []
 
         st.markdown("**Factores principales y valores del cliente**")
         for factor, nombre in zip(factores, nombres_factores):
@@ -362,11 +366,29 @@ with tab_ficha:
                 valor_texto = f"{valor_texto} (factor asociado a «{categoria}»)"
 
             st.write(f"- **{nombre}:** {valor_texto}")
+            if valor_texto == "Sin dato":
+                razones_factores.append(f"sin dato de {nombre.lower()}")
+            elif columna == "mou_Mean":
+                minutos = float(valor)
+                minutos_texto = (
+                    f"{minutos:,.0f}"
+                    if minutos.is_integer()
+                    else f"{minutos:,.1f}"
+                )
+                razones_factores.append(f"uso mensual de {minutos_texto} minutos")
+            elif columna == "change_mou":
+                razones_factores.append(f"cambio reciente en el uso de {valor_texto}")
+            elif columna == "change_rev":
+                razones_factores.append(
+                    f"cambio reciente en facturación de {valor_texto}"
+                )
+            else:
+                razones_factores.append(f"{nombre.lower()}: {valor_texto}")
 
-        explicacion = ", ".join(nombres_factores)
+        explicacion = ", ".join(razones_factores)
         st.info(
-            f"Este cliente tiene un riesgo de {riesgo:.0%}, "
-            f"principalmente por: {explicacion}."
+            f"Este cliente tiene un riesgo de {riesgo:.0%}. "
+            f"Las señales principales observadas fueron: {explicacion}."
         )
 
         if cliente["mou_Mean"] == 0:
