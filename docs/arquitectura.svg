@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="660" viewBox="0 0 1200 660" role="img" aria-labelledby="title desc">
+  <title id="title">Arquitectura del proyecto de predicción de churn</title>
+  <desc id="desc">El dataset CSV entra al pipeline Python orquestado por Airflow. El pipeline prepara datos, entrena LightGBM, evalúa y genera predicciones. Los resultados se guardan en PostgreSQL y los consume Streamlit; Adminer permite inspeccionar las bases de datos.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .box { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; rx: 14; }
+      .blue { fill: #eff6ff; stroke: #3b82f6; }
+      .green { fill: #ecfdf5; stroke: #10b981; }
+      .orange { fill: #fff7ed; stroke: #f97316; }
+      .purple { fill: #f5f3ff; stroke: #8b5cf6; }
+      .title { font: 700 28px system-ui, sans-serif; fill: #0f172a; }
+      .heading { font: 700 18px system-ui, sans-serif; fill: #0f172a; }
+      .text { font: 15px system-ui, sans-serif; fill: #334155; }
+      .small { font: 13px system-ui, sans-serif; fill: #475569; }
+      .arrow { fill: none; stroke: #475569; stroke-width: 2.5; marker-end: url(#arrow); }
+      .dash { stroke-dasharray: 7 6; }
+    </style>
+  </defs>
+  <rect class="bg" width="1200" height="660" rx="20"/>
+  <text class="title" x="48" y="54">Arquitectura · predicción de churn</text>
+  <text class="small" x="49" y="82">Flujo de datos, entrenamiento y consumo de resultados</text>
+
+  <rect class="box orange" x="50" y="254" width="205" height="112"/>
+  <text class="heading" x="78" y="293">Entrada</text>
+  <text class="text" x="78" y="321">data/dataset.csv</text>
+  <text class="small" x="78" y="345">CSV externo al repositorio</text>
+
+  <rect class="box blue" x="320" y="165" width="495" height="292"/>
+  <text class="heading" x="350" y="203">Airflow · DAG churn_pipeline</text>
+  <text class="small" x="350" y="228">Orquesta el pipeline Python (churn/)</text>
+  <rect class="box" x="350" y="255" width="205" height="72"/>
+  <text class="heading" x="370" y="285">1 · Preparar</text>
+  <text class="small" x="370" y="308">split train / test</text>
+  <rect class="box" x="580" y="255" width="205" height="72"/>
+  <text class="heading" x="600" y="285">2 · Entrenar</text>
+  <text class="small" x="600" y="308">LightGBM regularizado</text>
+  <rect class="box" x="350" y="355" width="205" height="72"/>
+  <text class="heading" x="370" y="385">3 · Evaluar</text>
+  <text class="small" x="370" y="408">AUC y métricas top-k</text>
+  <rect class="box" x="580" y="355" width="205" height="72"/>
+  <text class="heading" x="600" y="385">4 · Predecir</text>
+  <text class="small" x="600" y="408">riesgo, factores SHAP</text>
+
+  <rect class="box green" x="895" y="245" width="250" height="132"/>
+  <text class="heading" x="925" y="284">PostgreSQL</text>
+  <text class="text" x="925" y="314">clientes · predicciones</text>
+  <text class="text" x="925" y="339">metricas_modelo · importancias</text>
+  <text class="small" x="925" y="362">Base propia churn-db</text>
+
+  <rect class="box purple" x="895" y="465" width="250" height="92"/>
+  <text class="heading" x="925" y="502">Streamlit</text>
+  <text class="text" x="925" y="530">consulta y visualiza resultados</text>
+
+  <rect class="box" x="50" y="475" width="205" height="82"/>
+  <text class="heading" x="78" y="510">Adminer</text>
+  <text class="small" x="78" y="535">inspección de las bases</text>
+
+  <rect class="box" x="320" y="505" width="495" height="72"/>
+  <text class="heading" x="350" y="535">Artefactos locales</text>
+  <text class="small" x="350" y="558">data/*.parquet · models/modelo.pkl · logs/</text>
+
+  <path class="arrow" d="M255 310 H310"/>
+  <path class="arrow" d="M555 291 H570"/>
+  <path class="arrow" d="M682 327 V345"/>
+  <path class="arrow" d="M555 391 H570"/>
+  <path class="arrow" d="M682 427 C682 475 800 475 885 350"/>
+  <path class="arrow" d="M815 310 H885"/>
+  <path class="arrow" d="M1020 377 V455"/>
+  <path class="arrow dash" d="M255 515 C540 615 780 595 900 370"/>
+  <path class="arrow dash" d="M450 457 V495"/>
+  <path class="arrow dash" d="M682 457 V495"/>
+</svg>
