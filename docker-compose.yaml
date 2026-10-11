@@ -110,6 +110,20 @@ services:
       interval: 5s
       retries: 5
     restart: always
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    ports:
+      - "8501:8501"
+    environment:
+      CHURN_DB_URL: "postgresql+psycopg2://${CHURN_DB_USER}:${CHURN_DB_PASSWORD}@churn-db:5432/${CHURN_DB}"
+      PYTHONPATH: /app
+    depends_on:
+      churn-db:
+        condition: service_healthy
+    restart: always
   
   adminer:
     image: adminer
