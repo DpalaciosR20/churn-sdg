@@ -4,8 +4,10 @@ import plotly.express as px
 import pandas as pd
 from sqlalchemy import inspect
 
+from churn import config
 from churn.db import obtener_engine, leer_sql
 from churn.etiquetas import columna_factor, etiqueta
+from churn.eda import tasa_por_decil
 
 st.set_page_config(page_title="Retención de clientes", layout="wide")
 
@@ -18,6 +20,15 @@ def engine():
 @st.cache_data(ttl=300)
 def consultar(sql: str, parametros: dict | None = None):
     return leer_sql(sql, engine(), parametros)
+
+
+@st.cache_data(ttl=300)
+def consultar_tasa_por_decil(variable: str) -> pd.DataFrame:
+    if variable not in config.NUM_COLS:
+        raise ValueError(f"Variable no permitida para el análisis por deciles: {variable}")
+
+    datos = consultar(f'SELECT "{variable}", churn FROM clientes')
+    return tasa_por_decil(datos, variable)
 
 
 st.title("Retención de clientes")
@@ -362,4 +373,89 @@ with tab_ficha:
             st.warning(
                 "Posible abandono silencioso: el uso mensual de minutos es cero. "
                 "El modelo estima riesgo, pero este cliente quizá ya dejó de usar el servicio."
+            )
+
+with tab_drivers:
+    st.subheader("Qué mueve el churn")
+    st.warning(
+        "Estas relaciones muestran asociación, no causa. Antes de escalar una acción, "
+        "hay que medirla con un grupo de control."
+    )
+
+    if not inspect(engine()).has_table("importancia_variables"):
+        st.info("Aún no hay resultados; ejecuta el DAG `churn_pipeline`.")
+    else:
+        importancia = consultar("""
+            SELECT variable, importancia
+            FROM importancia_variables
+            ORDER BY importancia DESC
+            LIMIT 10
+        """)
+
+        if importancia.empty:
+            st.info("Aún no hay importancias calculadas; ejecuta el DAG `churn_pipeline`.")
+        else:
+            importancia["etiqueta"] = importancia["variable"].map(etiqueta)
+            importancia = importancia.sort_values("importancia", ascending=True)
+            fig_importancia = px.bar(
+                importancia,
+                x="importancia",
+                y="etiqueta",
+                orientation="h",
+                labels={
+                    "importancia": "Importancia media SHAP",
+                    "etiqueta": "Factor",
+                },
+                hover_data={"variable": True, "importancia": ":.3f"},
+            )
+            fig_importancia.update_layout(yaxis={"categoryorder": "total ascending"})
+            st.plotly_chart(fig_importancia, use_container_width=True)
+
+            variable = st.selectbox(
+                "Explora la tasa de churn por decil",
+                options=config.NUM_COLS,
+                format_func=etiqueta,
+            )
+            tabla_deciles = consultar_tasa_por_decil(variable).reset_index()
+            nombre_intervalo = tabla_deciles.columns[0]
+            tabla_deciles["grupo"] = tabla_deciles[nombre_intervalo].map(
+                lambda intervalo: (
+                    "Sin dato"
+                    if pd.isna(intervalo)
+                    else f"{intervalo.left:,.2f} a {intervalo.right:,.2f}"
+                )
+            )
+            tasa_general_clientes = consultar(
+                "SELECT AVG(churn) AS tasa_churn FROM clientes"
+            ).loc[0, "tasa_churn"]
+
+            fig_deciles = px.bar(
+                tabla_deciles,
+                x="grupo",
+                y="tasa_churn",
+                error_y="margen_ic",
+                custom_data=["n_clientes"],
+                labels={
+                    "grupo": etiqueta(variable),
+                    "tasa_churn": "Tasa de cancelación",
+                },
+            )
+            fig_deciles.update_traces(
+                hovertemplate=(
+                    "%{x}<br>Tasa de cancelación: %{y:.1%}"
+                    "<br>Clientes: %{customdata[0]:,}<extra></extra>"
+                )
+            )
+            fig_deciles.add_hline(
+                y=tasa_general_clientes,
+                line_dash="dash",
+                annotation_text=f"Promedio general: {tasa_general_clientes:.1%}",
+            )
+            fig_deciles.update_yaxes(tickformat=".0%", range=[0, 1])
+            fig_deciles.update_xaxes(tickangle=-35)
+            st.plotly_chart(fig_deciles, use_container_width=True)
+            st.caption(
+                "Los grupos se forman con los valores disponibles de la variable. "
+                "Si hay muchos valores repetidos, pueden resultar menos de diez deciles; "
+                "los datos faltantes aparecen como «Sin dato»."
             )
