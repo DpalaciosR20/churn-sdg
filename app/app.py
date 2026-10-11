@@ -181,7 +181,7 @@ with tab_contactar:
             "mou_Mean"
         FROM clientes_ordenados
         WHERE posicion_riesgo <= CEIL(total_clientes * :presupuesto_pct / 100.0)
-          AND ("rev_Mean" >= :ingreso_minimo OR "rev_Mean" IS NULL)
+          AND (:ingreso_minimo = 0 OR "rev_Mean" >= :ingreso_minimo)
           AND (
               :excluir_silenciosos = FALSE
               OR "mou_Mean" <> 0
