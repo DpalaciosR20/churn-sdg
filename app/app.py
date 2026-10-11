@@ -1,10 +1,11 @@
 # app/app.py
 import streamlit as st
 import plotly.express as px
+import pandas as pd
 from sqlalchemy import inspect
 
 from churn.db import obtener_engine, leer_sql
-from churn.etiquetas import etiqueta
+from churn.etiquetas import columna_factor, etiqueta
 
 st.set_page_config(page_title="Retención de clientes", layout="wide")
 
@@ -264,3 +265,101 @@ with tab_contactar:
             file_name="clientes_priorizados.csv",
             mime="text/csv",
         )
+
+with tab_ficha:
+    st.subheader("Ficha individual del cliente")
+
+    clientes_ficha = consultar("""
+        SELECT
+            p."Customer_ID",
+            p.riesgo,
+            p.grupo_riesgo,
+            p.churn_real,
+            p.factor_1,
+            p.factor_2,
+            p.factor_3,
+            c."rev_Mean",
+            c.months,
+            c.eqpdays,
+            c."mou_Mean",
+            c.change_mou,
+            c.hnd_price,
+            c."ovrrev_Mean",
+            c.uniqsubs,
+            c."drop_vce_Mean",
+            c."totmrc_Mean",
+            c.change_rev,
+            c.infobase,
+            c.phones,
+            c.asl_flag,
+            c."drop_blk_Mean"
+        FROM predicciones AS p
+        JOIN clientes AS c ON p."Customer_ID" = c."Customer_ID"
+        ORDER BY p.riesgo DESC, p."Customer_ID"
+        LIMIT 200
+    """)
+
+    if clientes_ficha.empty:
+        st.info("Aún no hay clientes con predicciones; ejecuta el DAG `churn_pipeline`.")
+    else:
+        customer_id = st.selectbox(
+            "Selecciona un cliente entre los 200 de mayor riesgo",
+            options=clientes_ficha["Customer_ID"].tolist(),
+            format_func=lambda customer: (
+                f"{customer} — riesgo "
+                f"{clientes_ficha.loc[clientes_ficha['Customer_ID'] == customer, 'riesgo'].iloc[0]:.1%}"
+            ),
+        )
+        cliente = clientes_ficha.loc[
+            clientes_ficha["Customer_ID"] == customer_id
+        ].iloc[0]
+
+        riesgo = float(cliente["riesgo"])
+        cancelado = "Sí" if int(cliente["churn_real"]) == 1 else "No"
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Riesgo estimado", f"{riesgo:.1%}")
+        c2.metric("Grupo de riesgo", f"{int(cliente['grupo_riesgo'])} de 10")
+        c3.metric("Canceló (conjunto de prueba)", cancelado)
+        st.caption(
+            "El resultado real solo está disponible porque esta ficha usa el conjunto "
+            "de prueba. En una campaña real todavía no se conocería."
+        )
+
+        factores = [str(cliente[f"factor_{numero}"]) for numero in range(1, 4)]
+        nombres_factores = [etiqueta(factor) for factor in factores]
+
+        st.markdown("**Factores principales y valores del cliente**")
+        for factor, nombre in zip(factores, nombres_factores):
+            columna = columna_factor(factor)
+            valor = cliente.get(columna)
+
+            if pd.isna(valor):
+                valor_texto = "Sin dato"
+            elif columna == "eqpdays":
+                valor_texto = f"{float(valor):,.0f} días"
+            elif columna == "months":
+                valor_texto = f"{int(valor)} meses"
+            elif columna in {"rev_Mean", "hnd_price", "ovrrev_Mean", "totmrc_Mean"}:
+                valor_texto = f"${float(valor):,.2f}"
+            elif columna == "mou_Mean":
+                valor_texto = f"{float(valor):,.1f} minutos al mes"
+            else:
+                valor_texto = str(valor)
+
+            if columna != factor:
+                categoria = factor.removeprefix(f"{columna}_")
+                valor_texto = f"{valor_texto} (factor asociado a «{categoria}»)"
+
+            st.write(f"- **{nombre}:** {valor_texto}")
+
+        explicacion = ", ".join(nombres_factores)
+        st.info(
+            f"Este cliente tiene un riesgo de {riesgo:.0%}, "
+            f"principalmente por: {explicacion}."
+        )
+
+        if cliente["mou_Mean"] == 0:
+            st.warning(
+                "Posible abandono silencioso: el uso mensual de minutos es cero. "
+                "El modelo estima riesgo, pero este cliente quizá ya dejó de usar el servicio."
+            )
